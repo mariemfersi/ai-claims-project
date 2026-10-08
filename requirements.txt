@@ -1,0 +1,4 @@
+numpy
+rank_bm25
+tiktoken
+sentence-transformers

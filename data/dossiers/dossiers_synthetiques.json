@@ -1,0 +1,123 @@
+{
+  "_info": "Jeu de 10 dossiers synthétiques (v0). Les champs 'photos' décrivent les photos à produire ou collecter (semaine 2-3). 'attendu' = vérité terrain pour l'évaluation de bout en bout.",
+  "contrat_reference": {
+    "garanties": ["responsabilite_civile", "dommages_tous_accidents", "bris_de_glace", "vol", "assistance"],
+    "conducteurs_designes": ["Sami Ben Salah"],
+    "usage_declare": "privé et trajet travail",
+    "date_souscription": "2025-03-01"
+  },
+  "dossiers": [
+    {
+      "id": "D01",
+      "scenario": "Sinistre simple, accepté",
+      "declaration": "Bonjour, le 12 septembre 2026 vers 8h30, j'étais arrêté au feu rouge avenue de la République quand une voiture m'a percuté à l'arrière. Le conducteur a reconnu sa faute et on a rempli un constat.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-09-12", "type": "collision", "tiers_implique": true},
+      "constat": {"date": "2026-09-12", "lieu": "Avenue de la République", "vehicule_A_point_choc": "arrière", "vehicule_B_point_choc": "avant", "cases_A": [1], "cases_B": [8], "signatures": 2},
+      "facture": {"garage": "Garage du Centre", "date": "2026-09-20", "lignes": [["Pare-chocs arrière", 420], ["Peinture", 260], ["Main d'œuvre 4h", 240]], "total_ttc": 920},
+      "photos": ["Pare-chocs arrière enfoncé, rayures, feu arrière intact"],
+      "audio": null,
+      "attendu": {"decision": "accept", "articles": ["6", "20", "21"], "anomalies": []}
+    },
+    {
+      "id": "D02",
+      "scenario": "Exclusion applicable : usage VTC non déclaré",
+      "declaration": "J'ai eu un accrochage samedi soir pendant une course pour l'application de VTC, un client était à l'arrière. J'ai heurté un poteau en tournant.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-09-19", "type": "collision", "tiers_implique": false},
+      "constat": null,
+      "facture": {"garage": "Carrosserie Nord", "date": "2026-09-23", "lignes": [["Aile avant droite", 510], ["Optique avant droit", 330], ["Main d'œuvre 5h", 300]], "total_ttc": 1140},
+      "photos": ["Aile avant droite enfoncée, phare avant droit cassé"],
+      "audio": null,
+      "attendu": {"decision": "reject", "articles": ["15"], "anomalies": ["usage non déclaré"]}
+    },
+    {
+      "id": "D03",
+      "scenario": "Incohérence de dates déclaration / constat",
+      "declaration": "Accident le 3 octobre 2026 sur le parking du supermarché, un véhicule a reculé dans ma portière.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-10-03", "type": "collision", "tiers_implique": true},
+      "constat": {"date": "2026-09-26", "lieu": "Parking Carrefour", "vehicule_A_point_choc": "latéral gauche", "vehicule_B_point_choc": "arrière", "cases_A": [1], "cases_B": [15], "signatures": 2},
+      "facture": {"garage": "Garage du Centre", "date": "2026-10-05", "lignes": [["Porte avant gauche", 690], ["Peinture", 280]], "total_ttc": 970},
+      "photos": ["Portière avant gauche enfoncée"],
+      "audio": null,
+      "attendu": {"decision": "investigate", "articles": ["25", "17"], "anomalies": ["écart de 7 jours entre déclaration et constat"]}
+    },
+    {
+      "id": "D04",
+      "scenario": "Photos contredisant le récit (choc frontal déclaré, dommages arrière)",
+      "declaration": "J'ai percuté de face un véhicule qui a grillé la priorité à un carrefour, tout l'avant de ma voiture est abîmé.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-09-28", "type": "collision", "tiers_implique": true},
+      "constat": {"date": "2026-09-28", "lieu": "Carrefour rue Ibn Khaldoun", "vehicule_A_point_choc": "avant", "vehicule_B_point_choc": "latéral droit", "cases_A": [], "cases_B": [17], "signatures": 2},
+      "facture": {"garage": "Auto Répar", "date": "2026-10-02", "lignes": [["Pare-chocs avant", 450], ["Calandre", 210], ["Main d'œuvre 3h", 180]], "total_ttc": 840},
+      "photos": ["Avant du véhicule intact", "Pare-chocs arrière fissuré et hayon enfoncé"],
+      "audio": null,
+      "attendu": {"decision": "investigate", "articles": ["25", "19"], "anomalies": ["zone d'impact incompatible avec le récit"]}
+    },
+    {
+      "id": "D05",
+      "scenario": "Facture au montant gonflé",
+      "declaration": "Ma voiture a été rayée et le rétroviseur gauche cassé par un camion de livraison qui est reparti. J'ai noté sa plaque.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-09-15", "type": "collision", "tiers_implique": true},
+      "constat": null,
+      "facture": {"garage": "Garage Express", "date": "2026-09-18", "lignes": [["Rétroviseur gauche complet", 380], ["Peinture complète côté gauche", 1900], ["Porte avant gauche", 950], ["Main d'œuvre 12h", 720]], "total_ttc": 3950},
+      "photos": ["Rétroviseur gauche cassé, rayure superficielle de 20 cm sur la porte"],
+      "audio": null,
+      "attendu": {"decision": "investigate", "articles": ["19", "25", "23"], "anomalies": ["facture très supérieure aux dommages visibles", "constat absent malgré tiers identifié"]}
+    },
+    {
+      "id": "D06",
+      "scenario": "Pièce manquante ou illisible",
+      "declaration": "On m'a volé ma voiture devant chez moi dans la nuit du 1er au 2 octobre.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-10-02", "type": "vol", "tiers_implique": false},
+      "constat": null,
+      "facture": null,
+      "depot_plainte": "absent",
+      "photos": [],
+      "audio": null,
+      "attendu": {"decision": "investigate", "articles": ["9", "18"], "anomalies": ["récépissé de plainte manquant"]}
+    },
+    {
+      "id": "D07",
+      "scenario": "Garantie ambiguë : sortie de route, conducteur non désigné",
+      "declaration": "Mon fils (permis depuis 1 an) a pris la voiture et a glissé dans un virage sous la pluie, il a fini dans le fossé.",
+      "formulaire": {"nom": "Sami Ben Salah", "conducteur": "Youssef Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-09-30", "type": "sortie_de_route", "tiers_implique": false},
+      "constat": null,
+      "facture": {"garage": "Garage du Centre", "date": "2026-10-04", "lignes": [["Bas de caisse", 380], ["Jante avant droite", 290], ["Géométrie", 90], ["Main d'œuvre 4h", 240]], "total_ttc": 1000},
+      "photos": ["Bas de caisse droit rayé et jante avant droite voilée, boue sur la carrosserie"],
+      "audio": null,
+      "attendu": {"decision": "investigate", "articles": ["6", "16", "20"], "anomalies": ["conducteur non désigné, jeune permis"]}
+    },
+    {
+      "id": "D08",
+      "scenario": "Dossier avec déclaration audio",
+      "declaration": null,
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-10-01", "type": "bris_de_glace", "tiers_implique": false},
+      "constat": null,
+      "facture": {"garage": "France Pare-Brise", "date": "2026-10-03", "lignes": [["Pare-brise", 520], ["Pose", 110]], "total_ttc": 630},
+      "photos": ["Pare-brise fissuré sur toute la largeur, point d'impact côté passager"],
+      "audio": {"fichier": "D08_declaration.mp3", "transcription_attendue": "Bonjour, hier sur l'autoroute un gravillon a frappé mon pare-brise, la fissure s'est agrandie pendant la nuit, il faut le changer."},
+      "attendu": {"decision": "accept", "articles": ["8", "20"], "anomalies": []}
+    },
+    {
+      "id": "D09",
+      "scenario": "Déclaration hors délai (vol déclaré après 6 jours)",
+      "declaration": "En rentrant de vacances le 25 septembre, j'ai trouvé ma vitre cassée et l'autoradio arraché. Je déclare aujourd'hui 1er octobre.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-09-25", "date_declaration": "2026-10-01", "type": "tentative_vol", "tiers_implique": false},
+      "constat": null,
+      "facture": {"garage": "Garage du Centre", "date": "2026-09-29", "lignes": [["Vitre arrière gauche", 260], ["Faisceau autoradio", 140]], "total_ttc": 400},
+      "depot_plainte": "présent, daté du 2026-09-25",
+      "photos": ["Vitre arrière gauche brisée, tableau de bord avec câbles arrachés"],
+      "audio": null,
+      "attendu": {"decision": "investigate", "articles": ["17", "9"], "anomalies": ["déclaration au-delà de 2 jours ouvrés pour un vol"]}
+    },
+    {
+      "id": "D10",
+      "scenario": "Bris de glace simple, réparation d'impact",
+      "declaration": "Petit impact sur le pare-brise hier, le garage l'a réparé sans le changer.",
+      "formulaire": {"nom": "Sami Ben Salah", "immatriculation": "AB-123-CD", "date_sinistre": "2026-10-05", "type": "bris_de_glace", "tiers_implique": false},
+      "constat": null,
+      "facture": {"garage": "France Pare-Brise", "date": "2026-10-06", "lignes": [["Réparation impact", 85]], "total_ttc": 85},
+      "photos": ["Impact de 1 cm sur le pare-brise, hors champ de vision du conducteur"],
+      "audio": null,
+      "attendu": {"decision": "accept", "articles": ["8", "20"], "anomalies": []}
+    }
+  ]
+}

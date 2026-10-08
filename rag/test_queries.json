@@ -1,0 +1,22 @@
+[
+  {"id": "Q01", "query": "Le bris de glace est-il couvert ?", "expected": ["8"]},
+  {"id": "Q02", "query": "Que se passe-t-il si le conducteur n'est pas désigné au contrat ?", "expected": ["16"]},
+  {"id": "Q03", "query": "Quel est le délai pour déclarer un vol ?", "expected": ["17"]},
+  {"id": "Q04", "query": "Quelle franchise en cas de responsabilité partielle ?", "expected": ["21"]},
+  {"id": "Q05", "query": "Montant de la franchise pour un remplacement de pare-brise", "expected": ["20"]},
+  {"id": "Q06", "query": "Un accident en état d'ivresse est-il indemnisé ?", "expected": ["14"]},
+  {"id": "Q07", "query": "Je fais du VTC avec ma voiture personnelle, suis-je couvert ?", "expected": ["15"]},
+  {"id": "Q08", "query": "Sortie de route sans autre véhicule avec la garantie collision", "expected": ["7"]},
+  {"id": "Q09", "query": "Quels documents envoyer pour déclarer un sinistre ?", "expected": ["18"]},
+  {"id": "Q10", "query": "Quand l'assureur envoie-t-il un expert ?", "expected": ["19"]},
+  {"id": "Q11", "query": "Facture de réparation gonflée, que risque l'assuré ?", "expected": ["23", "25"]},
+  {"id": "Q12", "query": "Dans quels cas un dossier doit passer en investigation ?", "expected": ["25"]},
+  {"id": "Q13", "query": "Dommages causés par la grêle", "expected": ["10"]},
+  {"id": "Q14", "query": "Délai de déclaration après une inondation reconnue catastrophe naturelle", "expected": ["17", "11"]},
+  {"id": "Q15", "query": "Le conducteur responsable est blessé, est-il indemnisé ?", "expected": ["12"]},
+  {"id": "Q16", "query": "Conduite sans permis valide", "expected": ["14"]},
+  {"id": "Q17", "query": "Accident survenu au Maroc, suis-je assuré ?", "expected": ["3"]},
+  {"id": "Q18", "query": "Qui doit valider un refus de prise en charge ?", "expected": ["24"]},
+  {"id": "Q19", "query": "Jeune conducteur qui emprunte la voiture, franchise ?", "expected": ["16", "20"]},
+  {"id": "Q20", "query": "Remorquage après accident", "expected": ["13"]}
+]

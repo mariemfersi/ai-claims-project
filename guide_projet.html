@@ -1,0 +1,343 @@
+<title>AI Claims Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout : colonne de lecture unique (~72ch), en-tête type "dossier" avec tampon de décision, sections numérotées car le projet suit un ordre réel */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --ink:#1b2733; --muted:#5a6672; --line:#d9ddd6;
+  --folder:#a8691a; --folder-soft:#f4e7d2;
+  --ok:#2f7a4f; --warn:#b26b00; --bad:#b23a3a;
+  --ok-soft:#e3f1e8; --warn-soft:#fbefd9; --bad-soft:#f7e2e2;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Public Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a20; --surface:#1c242c; --ink:#e6eae6; --muted:#9aa6b0; --line:#2e3a44;
+  --folder:#e0a34e; --folder-soft:#3a2d1a;
+  --ok:#6cc093; --warn:#e8a94a; --bad:#e78080;
+  --ok-soft:#1d3327; --warn-soft:#3a2e17; --bad-soft:#3a2020; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a20; --surface:#1c242c; --ink:#e6eae6; --muted:#9aa6b0; --line:#2e3a44;
+  --folder:#e0a34e; --folder-soft:#3a2d1a;
+  --ok:#6cc093; --warn:#e8a94a; --bad:#e78080;
+  --ok-soft:#1d3327; --warn-soft:#3a2e17; --bad-soft:#3a2020; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body);padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:780px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15}
+h1{font-size:clamp(2rem,6vw,3rem);margin:0}
+h2{font-size:1.6rem;margin:0 0 .6rem;display:flex;gap:.6rem;align-items:baseline}
+h2 .n{font-family:var(--f-mono);font-size:.85rem;color:var(--folder);font-weight:600}
+h3{font-size:1.1rem;margin:1.4rem 0 .4rem}
+p{margin:.5rem 0}
+a{color:var(--folder)}
+code,.mono{font-family:var(--f-mono);font-size:.86em}
+code{background:var(--folder-soft);padding:.05em .35em;border-radius:3px}
+.eyebrow{font-family:var(--f-mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+header.file{margin-top:32px;background:var(--surface);border:1px solid var(--line);border-top:6px solid var(--folder);padding:28px 24px;position:relative}
+header.file .lede{font-size:1.1rem;color:var(--muted);max-width:56ch;margin-top:.6rem}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:18px;font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.stamps{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.stamp{font-family:var(--f-mono);font-weight:600;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border:2px solid currentColor;border-radius:4px}
+.s-ok{color:var(--ok);background:var(--ok-soft)} .s-warn{color:var(--warn);background:var(--warn-soft)} .s-bad{color:var(--bad);background:var(--bad-soft)}
+
+nav.toc{margin:24px 0 8px;display:flex;flex-wrap:wrap;gap:6px}
+nav.toc a{font-size:.85rem;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--folder);outline:none}
+
+section{padding-top:44px}
+.callout{background:var(--folder-soft);border-left:4px solid var(--folder);padding:14px 18px;margin:16px 0}
+.callout p{margin:.2rem 0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:12px 0}
+.box{background:var(--surface);border:1px solid var(--line);padding:14px 16px;min-width:0}
+.box h4{margin:0 0 .3rem;font-family:var(--f-display);font-size:1rem}
+.box p{margin:0;color:var(--muted);font-size:.93rem}
+ul.clean{padding-left:1.1rem;margin:.4rem 0} ul.clean li{margin:.25rem 0}
+
+.tablewrap{overflow-x:auto;margin:12px 0;border:1px solid var(--line);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--f-mono);font-size:.85rem;white-space:nowrap}
+.bar{display:inline-block;height:8px;background:var(--folder);border-radius:2px;vertical-align:middle;margin-right:6px}
+
+.diagram{background:var(--surface);border:1px solid var(--line);padding:12px;overflow-x:auto;margin:14px 0}
+.diagram svg{display:block;min-width:620px;width:100%;height:auto}
+.diagram text{font-family:var(--f-body);fill:var(--ink)}
+.diagram .lbl{font-size:13px;font-weight:600}
+.diagram .sub{font-size:11px;fill:var(--muted)}
+.diagram .node{fill:var(--surface);stroke:var(--ink);stroke-width:1.2}
+.diagram .node-p{fill:var(--folder-soft);stroke:var(--folder);stroke-width:1.4}
+.diagram .edge{stroke:var(--muted);stroke-width:1.4;fill:none}
+.diagram .zone{fill:none;stroke:var(--folder);stroke-dasharray:5 4}
+.diagram .arrowhead{fill:var(--muted)}
+
+.weeks{display:grid;gap:8px;margin:12px 0}
+.week{display:grid;grid-template-columns:90px 1fr;gap:12px;background:var(--surface);border:1px solid var(--line);padding:12px 14px}
+.week .w{font-family:var(--f-mono);font-size:.8rem;color:var(--muted)}
+.week.now{border-color:var(--folder);box-shadow:inset 4px 0 0 var(--folder)}
+.week .w b{display:block;color:var(--ink);font-size:.95rem}
+.pill{display:inline-block;font-family:var(--f-mono);font-size:.7rem;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.pill.done{background:var(--ok-soft);color:var(--ok)} .pill.part{background:var(--warn-soft);color:var(--warn)} .pill.todo{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+ol.steps{padding-left:1.2rem} ol.steps li{margin:.4rem 0}
+footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:480px){header.file{padding:22px 16px}.week{grid-template-columns:1fr;gap:4px}}
+</style>
+
+<div class="wrap">
+
+<header class="file">
+  <div class="eyebrow">Dossier projet · Advanced Deep Learning · ESPRIT 5DS 2026-2027</div>
+  <h1 style="margin-top:.4rem">AI Claims Agent</h1>
+  <p class="lede">Un système d'agents IA, orchestré dans n8n, qui analyse un dossier de sinistre auto (texte, PDF, photos, audio) et propose au gestionnaire une décision justifiée.</p>
+  <div class="stamps" aria-label="Les trois décisions possibles">
+    <span class="stamp s-ok">Accept</span><span class="stamp s-warn">Investigate</span><span class="stamp s-bad">Reject</span>
+  </div>
+  <div class="meta"><span>Équipe : 5 à 6</span><span>Durée : 5 semaines</span><span>Suivi : chaque semaine</span><span>Final : démo 15 min + 10 min de questions</span></div>
+</header>
+
+<nav class="toc" aria-label="Sommaire">
+  <a href="#resume">En bref</a><a href="#consignes">Consignes</a><a href="#sujet">Le sujet</a><a href="#archi">Architecture</a><a href="#rag">RAG</a><a href="#multi">Multimodalité</a><a href="#prompts">Prompts</a><a href="#livrables">Livrables</a><a href="#planning">Planning</a><a href="#v0">Travail v0</a><a href="#suivi">Suivi de demain</a>
+</nav>
+
+<section id="resume">
+  <h2><span class="n">00</span>En bref</h2>
+  <div class="callout">
+    <p><strong>On n'entraîne pas de modèle.</strong> On assemble des modèles existants (LLM, modèle vision, Whisper) en plusieurs agents spécialisés, reliés dans un workflow n8n qui tourne de bout en bout.</p>
+    <p><strong>Le sujet compte peu.</strong> La prof note les choix techniques et leur justification : prompts, RAG, architecture multi-agents, multimodalité.</p>
+  </div>
+  <div class="grid2">
+    <div class="box"><h4>Ce qu'on construit</h4><p>Un pipeline n8n déclenché par webhook : un dossier entre, un rapport et une recommandation sortent.</p></div>
+    <div class="box"><h4>Ce qu'on rend</h4><p>Le workflow n8n (JSON), un rapport de 8 pages, la bibliothèque de prompts, l'évaluation du retrieval.</p></div>
+    <div class="box"><h4>Outils</h4><p>n8n, une API LLM avec vision (Gemini, GPT, Claude…), Whisper, Python, Qdrant ou Chroma.</p></div>
+    <div class="box"><h4>Ce qu'on ne fait pas</h4><p>Pas de notebook à exécuter cellule par cellule, pas de site web, pas d'entraînement de réseau.</p></div>
+  </div>
+</section>
+
+<section id="consignes">
+  <h2><span class="n">01</span>Ce que demande la prof</h2>
+  <p>Cinq exigences obligatoires, chacune doit apparaître dans le rapport et la démo.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Exigence</th><th>Ce que ça veut dire concrètement</th><th>Poids</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Plateforme d'automatisation</strong></td><td>Tout tourne dans n8n, déclenchable de bout en bout.</td><td class="num">inclus</td></tr>
+      <tr><td><strong>Prompt engineering</strong></td><td>Bibliothèque versionnée : rôle, technique, échecs observés, corrections, un avant/après par prompt clé.</td><td class="num"><span class="bar" style="width:40px"></span>20 %</td></tr>
+      <tr><td><strong>RAG</strong></td><td>Notre propre base de connaissances. Justifier corpus, chunking, embeddings, vector store, top-k. Évaluer sur des requêtes test. Comparer deux chunkings est très valorisé.</td><td class="num"><span class="bar" style="width:50px"></span>25 %</td></tr>
+      <tr><td><strong>Multi-agents</strong></td><td>Plusieurs agents, rôle et outils de chacun, flux d'information, et pourquoi une autre architecture serait pire.</td><td class="num"><span class="bar" style="width:50px"></span>25 %</td></tr>
+      <tr><td><strong>Multimodalité</strong></td><td>Au moins une modalité non textuelle (image, audio, PDF avec mise en page). Expliquer ce qu'elle apporte.</td><td class="num"><span class="bar" style="width:30px"></span>15 %</td></tr>
+      <tr><td><strong>Démo, rapport, questions</strong></td><td>Chaque membre parle et doit pouvoir répondre sur n'importe quelle partie.</td><td class="num"><span class="bar" style="width:30px"></span>15 %</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Trois règles qui changent la façon de travailler</h3>
+  <ul class="clean">
+    <li>Une architecture simple qu'on sait défendre vaut mieux qu'une architecture compliquée qu'on ne sait pas expliquer.</li>
+    <li>Montrer ce qui n'a pas marché rapporte des points. On garde une trace des échecs dès maintenant.</li>
+    <li>Un suivi manqué ou vide est pénalisé sur la note finale.</li>
+  </ul>
+</section>
+
+<section id="sujet">
+  <h2><span class="n">02</span>Le sujet : la gestion d'un sinistre auto</h2>
+  <p>Aujourd'hui, un gestionnaire d'assurance lit la déclaration du client, ouvre le constat amiable et la facture, regarde les photos, vérifie dans les conditions générales si le sinistre est couvert, et cherche les incohérences. C'est long, manuel, et chaque dossier mélange texte, PDF, images et parfois audio.</p>
+  <p><strong>La question du projet :</strong> comment automatiser cette analyse de bout en bout, de façon traçable et justifiée, en laissant la décision finale au gestionnaire ?</p>
+  <h3>Ce qui entre dans le système</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Pièce</th><th>Format</th><th>Traitée par</th></tr></thead>
+    <tbody>
+      <tr><td>Déclaration du client</td><td>Texte libre</td><td>Intake Agent</td></tr>
+      <tr><td>Formulaire</td><td>Champs structurés</td><td>Intake Agent</td></tr>
+      <tr><td>Constat amiable</td><td>PDF avec cases (1 à 17) et croquis</td><td>Document Agent</td></tr>
+      <tr><td>Facture ou devis</td><td>PDF ou image</td><td>Document Agent</td></tr>
+      <tr><td>Photos du véhicule</td><td>JPEG / PNG</td><td>Vision Agent</td></tr>
+      <tr><td>Déclaration vocale (bonus)</td><td>Audio</td><td>Whisper, puis Intake Agent</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Ce qui en sort</h3>
+  <ul class="clean">
+    <li>Une recommandation <span class="stamp s-ok" style="font-size:.65rem;padding:1px 6px">accept</span> <span class="stamp s-warn" style="font-size:.65rem;padding:1px 6px">investigate</span> <span class="stamp s-bad" style="font-size:.65rem;padding:1px 6px">reject</span> avec une justification et un niveau de confiance.</li>
+    <li>Les articles du contrat utilisés et les incohérences détectées entre les pièces.</li>
+    <li>Un rapport lisible pour le gestionnaire, qui valide toujours (surtout les rejets).</li>
+  </ul>
+</section>
+
+<section id="archi">
+  <h2><span class="n">03</span>L'architecture multi-agents</h2>
+  <p>Un orchestrateur lance trois agents en parallèle (ils sont indépendants), puis trois agents en séquence (chacun a besoin de la sortie du précédent).</p>
+  <div class="diagram" role="img" aria-label="Schéma : webhook, Intake Agent, puis Document, Vision et Policy en parallèle, puis Fraud, Decision et Report en séquence">
+    <svg viewBox="0 0 820 330" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead"/></marker></defs>
+      <rect class="node" x="10" y="140" width="110" height="50" rx="4"/>
+      <text class="lbl" x="65" y="162" text-anchor="middle">Webhook n8n</text><text class="sub" x="65" y="178" text-anchor="middle">dépôt du dossier</text>
+      <rect class="node" x="150" y="140" width="120" height="50" rx="4"/>
+      <text class="lbl" x="210" y="162" text-anchor="middle">1. Intake</text><text class="sub" x="210" y="178" text-anchor="middle">JSON normalisé</text>
+      <rect class="zone" x="300" y="20" width="170" height="290" rx="6"/>
+      <text class="sub" x="385" y="303" text-anchor="middle">exécution parallèle</text>
+      <rect class="node-p" x="315" y="40" width="140" height="56" rx="4"/>
+      <text class="lbl" x="385" y="63" text-anchor="middle">2. Document</text><text class="sub" x="385" y="80" text-anchor="middle">constat + facture (PDF)</text>
+      <rect class="node-p" x="315" y="137" width="140" height="56" rx="4"/>
+      <text class="lbl" x="385" y="160" text-anchor="middle">3. Vision</text><text class="sub" x="385" y="177" text-anchor="middle">photos des dommages</text>
+      <rect class="node-p" x="315" y="234" width="140" height="56" rx="4"/>
+      <text class="lbl" x="385" y="257" text-anchor="middle">4. Policy / RAG</text><text class="sub" x="385" y="274" text-anchor="middle">articles du contrat</text>
+      <rect class="node" x="500" y="140" width="90" height="50" rx="4"/>
+      <text class="lbl" x="545" y="162" text-anchor="middle">5. Fraud</text><text class="sub" x="545" y="178" text-anchor="middle">incohérences</text>
+      <rect class="node" x="610" y="140" width="90" height="50" rx="4"/>
+      <text class="lbl" x="655" y="162" text-anchor="middle">6. Decision</text><text class="sub" x="655" y="178" text-anchor="middle">+ confiance</text>
+      <rect class="node" x="720" y="140" width="90" height="50" rx="4"/>
+      <text class="lbl" x="765" y="162" text-anchor="middle">7. Report</text><text class="sub" x="765" y="178" text-anchor="middle">gestionnaire</text>
+      <path class="edge" d="M120 165H148" marker-end="url(#ah)"/>
+      <path class="edge" d="M270 165H290V68H313" marker-end="url(#ah)"/>
+      <path class="edge" d="M270 165H313" marker-end="url(#ah)"/>
+      <path class="edge" d="M290 165V262H313" marker-end="url(#ah)"/>
+      <path class="edge" d="M455 68H482V165H498" marker-end="url(#ah)"/>
+      <path class="edge" d="M455 165H498" marker-end="url(#ah)"/>
+      <path class="edge" d="M455 262H482V165"/>
+      <path class="edge" d="M590 165H608" marker-end="url(#ah)"/>
+      <path class="edge" d="M700 165H718" marker-end="url(#ah)"/>
+    </svg>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Agent</th><th>Rôle</th><th>Outils</th><th>Sortie</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1. Intake</strong></td><td>Comprend la déclaration : date, lieu, circonstances, parties, type de sinistre</td><td>LLM, Whisper si audio</td><td>JSON normalisé</td></tr>
+      <tr><td><strong>2. Document</strong></td><td>Extrait les champs du constat et de la facture</td><td>LLM vision, schéma JSON strict</td><td>JSON par document</td></tr>
+      <tr><td><strong>3. Vision</strong></td><td>Décrit les dommages, zone d'impact, sévérité, cohérence avec le récit</td><td>Modèle multimodal</td><td>Zones, sévérité, cohérence</td></tr>
+      <tr><td><strong>4. Policy / RAG</strong></td><td>Retrouve garanties, exclusions, franchises applicables</td><td>Base vectorielle</td><td>Articles cités, verdict de couverture</td></tr>
+      <tr><td><strong>5. Fraud</strong></td><td>Croise dates, montants, zones d'impact, récit</td><td>LLM + règles</td><td>Score de risque, anomalies</td></tr>
+      <tr><td><strong>6. Decision</strong></td><td>Agrège tout et recommande</td><td>LLM + seuils</td><td>Décision, justification, confiance</td></tr>
+      <tr><td><strong>7. Report</strong></td><td>Rédige la synthèse</td><td>LLM</td><td>Rapport structuré</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Pourquoi cette architecture (à savoir défendre à l'oral)</h3>
+  <ul class="clean">
+    <li><strong>Parallèle pour 2, 3, 4</strong> : ils ne dépendent pas les uns des autres, donc on gagne en temps de réponse.</li>
+    <li><strong>Séquentiel pour 5, 6, 7</strong> : le Fraud Agent compare les sorties des autres, il n'a rien à analyser sans elles.</li>
+    <li><strong>Rejeté : un seul gros prompt</strong>. Vision, extraction, droit et fraude dans un seul appel donne plus d'hallucinations et un débogage impossible.</li>
+    <li><strong>Rejeté : tout en séquence</strong>. Plus lent, sans gain de qualité pour trois agents indépendants.</li>
+    <li><strong>Garde-fou</strong> : si un agent échoue ou si on doute, le dossier passe en investigate, jamais en accept par défaut.</li>
+  </ul>
+</section>
+
+<section id="rag">
+  <h2><span class="n">04</span>Le RAG : la base de connaissances</h2>
+  <p>Le Policy Agent ne doit pas répondre de mémoire : il cherche dans les conditions générales du contrat et cite l'article. C'est le bloc le plus lourd de la note (25 %).</p>
+  <div class="grid2">
+    <div class="box"><h4>Corpus</h4><p>Conditions générales auto, exclusions, franchises, délais de déclaration, guide de procédures interne. Cible : 30 à 100 pages.</p></div>
+    <div class="box"><h4>Chunking A (baseline)</h4><p>Taille fixe : 500 tokens, overlap 50.</p></div>
+    <div class="box"><h4>Chunking B (candidat)</h4><p>Un chunk par article, avec métadonnées : n° d'article, chapitre, type de garantie.</p></div>
+    <div class="box"><h4>Embeddings et stockage</h4><p>Modèle multilingue (bge-m3 ou multilingual-e5), Qdrant ou Chroma, top-k 4 à 6, filtres par type de garantie.</p></div>
+  </div>
+  <p><strong>Hypothèse à tester :</strong> les CG sont organisées en articles autonomes, donc découper par article devrait mieux garder le sens. Une exclusion séparée de sa garantie est dangereuse.</p>
+  <p><strong>Évaluation :</strong> 15 à 20 questions test avec l'article attendu, mesurées en <code>hit@k</code> (l'article attendu est-il dans les k premiers résultats ?) et <code>MRR</code> (à quel rang apparaît-il en moyenne ?).</p>
+</section>
+
+<section id="multi">
+  <h2><span class="n">05</span>Multimodalité</h2>
+  <ul class="clean">
+    <li><strong>Images</strong> : photos du véhicule, zone d'impact, gravité.</li>
+    <li><strong>PDF avec mise en page</strong> : le constat amiable a des cases cochées et un croquis, un simple OCR ne suffit pas.</li>
+    <li><strong>Audio (bonus)</strong> : déclaration vocale transcrite par Whisper.</li>
+  </ul>
+  <div class="callout"><p><strong>L'argument pour la démo :</strong> la déclaration parle d'un choc frontal, mais la photo montre l'arrière enfoncé. Un système texte seul ne peut pas le voir. C'est le dossier D04 de notre jeu de test.</p></div>
+</section>
+
+<section id="prompts">
+  <h2><span class="n">06</span>Prompt engineering (20 %)</h2>
+  <p>Un fichier séparé documente chaque prompt. Ce qui compte : montrer les échecs observés et comment on les a corrigés.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Prompt</th><th>Technique</th><th>Échec typique à documenter</th></tr></thead>
+    <tbody>
+      <tr><td>Extraction du constat</td><td>Sortie JSON stricte + schéma</td><td>Champs inventés, dates mal formatées</td></tr>
+      <tr><td>Analyse des dommages</td><td>Rôle d'expert + grille de sévérité</td><td>Descriptions vagues, surestimation</td></tr>
+      <tr><td>Policy / RAG</td><td>Citer l'article obligatoire, refus si absent</td><td>Garanties hallucinées</td></tr>
+      <tr><td>Fraud</td><td>Chain-of-thought + garde-fous</td><td>Faux positifs sur des écarts mineurs</td></tr>
+      <tr><td>Décision</td><td>Few-shot sur cas limites</td><td>Confiance mal calibrée</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="livrables">
+  <h2><span class="n">07</span>Livrables (la veille de la soutenance)</h2>
+  <ol class="steps">
+    <li>Le workflow n8n exporté en JSON, avec les instructions pour le lancer.</li>
+    <li>Un rapport technique de 8 pages maximum couvrant les cinq exigences, échecs compris.</li>
+    <li>La bibliothèque de prompts, dans un fichier séparé.</li>
+    <li>L'évaluation du retrieval : requêtes, résultats, commentaires.</li>
+    <li>Le jour J : démo live de 15 minutes sur un dossier complet, puis 10 minutes de questions.</li>
+  </ol>
+  <h3>Jeu de test synthétique</h3>
+  <p>Il n'existe pas de vrais dossiers : on en crée 8 à 10 qui couvrent chaque situation (accepté, exclusion, dates incohérentes, photos contradictoires, facture gonflée, pièce manquante, garantie ambiguë, audio).</p>
+</section>
+
+<section id="planning">
+  <h2><span class="n">08</span>Planning sur 5 semaines</h2>
+  <div class="weeks">
+    <div class="week now"><div class="w"><b>Semaine 1</b>suivi de demain</div><div>Périmètre, architecture, rôles, choix de n8n, dossiers synthétiques. <span class="pill done">couvert par la v0</span></div></div>
+    <div class="week"><div class="w"><b>Semaine 2</b></div><div>Corpus complet, deux chunkings, premiers tests de retrieval. <span class="pill part">démarré</span></div></div>
+    <div class="week"><div class="w"><b>Semaine 3</b></div><div>Agents connectés, prompts v1, vision et PDF testés seuls. <span class="pill part">Intake branché</span></div></div>
+    <div class="week"><div class="w"><b>Semaine 4</b></div><div>Intégration complète, itérations de prompts, gestion d'erreurs. <span class="pill todo">à faire</span></div></div>
+    <div class="week"><div class="w"><b>Semaine 5</b></div><div>Tests finaux, rapport, répétition de la démo. <span class="pill todo">à faire</span></div></div>
+  </div>
+  <h3>Répartition des rôles</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Rôle</th><th>Responsable</th></tr></thead>
+    <tbody>
+      <tr><td>Orchestration n8n et intégration</td><td class="mono">à attribuer</td></tr>
+      <tr><td>RAG : corpus, chunking, évaluation</td><td class="mono">à attribuer</td></tr>
+      <tr><td>Vision et audio</td><td class="mono">à attribuer</td></tr>
+      <tr><td>Document Agent et jeu de données</td><td class="mono">à attribuer</td></tr>
+      <tr><td>Fraud et Decision : règles, seuils</td><td class="mono">à attribuer</td></tr>
+      <tr><td>Prompts, rapport et démo</td><td class="mono">à attribuer</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="v0">
+  <h2><span class="n">09</span>Ce que contient la v0 (≈ 35 %)</h2>
+  <p>Le dossier <code>ai-claims-agent.zip</code> est une première version de travail. Il couvre le jalon de la semaine 1 et démarre ceux des semaines 2 et 3.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Fichier</th><th>Contenu</th><th>État</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">data/corpus/</td><td>Conditions générales structurées en 26 articles (≈ 4 000 tokens)</td><td><span class="pill part">à enrichir</span></td></tr>
+      <tr><td class="mono">data/dossiers/</td><td>10 dossiers synthétiques avec la décision attendue</td><td><span class="pill part">PDF et photos à produire</span></td></tr>
+      <tr><td class="mono">rag/</td><td>Deux chunkings, 20 requêtes test, script d'évaluation</td><td><span class="pill done">tourne</span></td></tr>
+      <tr><td class="mono">prompts/PROMPTS.md</td><td>Prompts Intake et Document en v1</td><td><span class="pill part">2 sur 7</span></td></tr>
+      <tr><td class="mono">n8n/</td><td>Workflow : webhook, Intake Agent réel, 6 agents en attente</td><td><span class="pill part">squelette</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Premiers résultats du retrieval</h3>
+  <p>20 requêtes, top-5, BM25 et embeddings <code>multilingual-e5-small</code>.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Chunking</th><th>Retriever</th><th>Chunks</th><th>hit@1</th><th>hit@5</th><th>MRR@5</th><th>Tokens envoyés</th></tr></thead>
+    <tbody>
+      <tr><td>Fixe 500/50</td><td>BM25</td><td class="num">9</td><td class="num">0,65</td><td class="num">1,00</td><td class="num">0,78</td><td class="num">2 417</td></tr>
+      <tr><td>Fixe 500/50</td><td>Dense</td><td class="num">9</td><td class="num">0,75</td><td class="num">1,00</td><td class="num">0,83</td><td class="num">2 403</td></tr>
+      <tr><td>Par article</td><td>BM25</td><td class="num">26</td><td class="num">0,55</td><td class="num">0,85</td><td class="num">0,69</td><td class="num">791</td></tr>
+      <tr><td>Par article</td><td>Dense</td><td class="num">26</td><td class="num">0,65</td><td class="num">0,95</td><td class="num">0,78</td><td class="num">762</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <p><strong>Lecture honnête :</strong> le chunking fixe semble gagner, mais c'est un biais. Avec seulement 9 gros chunks, le top-5 renvoie plus de la moitié du corpus, donc il « trouve » forcément. Il envoie aussi trois fois plus de tokens au LLM.</p>
+    <p>Prochaine étape (semaine 2) : refaire la mesure sur un corpus de 30 pages et plus, tester bge-m3 et le filtrage par type de garantie. C'est exactement le genre d'analyse qui rapporte des points.</p>
+  </div>
+</section>
+
+<section id="suivi">
+  <h2><span class="n">10</span>Pour le suivi de demain</h2>
+  <ol class="steps">
+    <li>Présenter le cas d'usage et la problématique en une minute.</li>
+    <li>Montrer le schéma d'architecture et justifier parallèle puis séquentiel.</li>
+    <li>Annoncer l'outil : n8n, avec le fournisseur LLM choisi.</li>
+    <li>Présenter la répartition des rôles (remplir le tableau ci-dessus).</li>
+    <li>Montrer les 10 scénarios de test et le corpus de départ.</li>
+    <li>Montrer les premiers chiffres du retrieval et la limite qu'on a repérée.</li>
+    <li>Dire ce qui est prévu pour la semaine 2.</li>
+  </ol>
+  <p>Chaque membre doit pouvoir expliquer chaque partie : prenez le temps de relire ensemble le code et les choix avant la séance.</p>
+</section>
+
+<footer>AI Claims Agent · page de cadrage v0 · 7 octobre 2026</footer>
+</div>

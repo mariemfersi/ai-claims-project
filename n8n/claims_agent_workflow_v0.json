@@ -1,0 +1,146 @@
+{
+  "name": "AI Claims Agent — v0 (squelette)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "claims",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook dossier",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "claims-agent-v0"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise le dossier reçu et ajoute un identifiant de traitement\nconst d = $input.first().json.body ?? $input.first().json;\nreturn [{ json: {\n  dossier_id: d.id ?? ('DOS-' + Date.now()),\n  date_depot: d.date_depot ?? new Date().toISOString().slice(0, 10),\n  declaration: d.declaration ?? '',\n  formulaire: d.formulaire ?? {},\n  constat: d.constat ?? null,\n  facture: d.facture ?? null,\n  photos: d.photos ?? [],\n  audio: d.audio ?? null,\n  journal: [{ etape: 'reception', ts: new Date().toISOString() }]\n}}];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Préparer le dossier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'gemini-3.8-flash', temperature: 0, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Tu es un assistant de saisie pour un service de gestion des sinistres automobiles. Extrais uniquement les faits de la déclaration. Réponds UNIQUEMENT avec un JSON valide contenant: date_sinistre (AAAA-MM-JJ ou null), heure, lieu, type_sinistre, tiers_implique, conducteur, circonstances, zone_impact_declaree, usage_au_moment_du_sinistre, ecarts_formulaire (liste), remarques (liste). N invente rien: null si absent. Convertis les dates relatives à partir de la date de dépôt.' }, { role: 'user', content: 'Date de dépôt : ' + $json.date_depot + '\\nFormulaire : ' + JSON.stringify($json.formulaire) + '\\nDéclaration : \"\"\"' + $json.declaration + '\"\"\"' } ] }) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "1. Claim Intake Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse la sortie du LLM et distingue les erreurs fournisseur des réponses JSON invalides.\nconst dossier = $('Préparer le dossier').first().json;\nconst response = $input.first().json;\nlet intake = null, erreur = null;\nif (response.error) {\n  const status = response.error.status ? 'HTTP ' + response.error.status : 'requête refusée';\n  erreur = 'Échec de l’appel Gemini (' + status + ') : ' + (response.error.message ?? 'détail indisponible');\n} else {\n  const raw = response.choices?.[0]?.message?.content;\n  if (typeof raw !== 'string') {\n    erreur = 'Réponse Gemini inattendue : choices[0].message.content est absent.';\n  } else {\n    try {\n      intake = JSON.parse(raw.replace(/^```json|```$/g, '').trim());\n    } catch (e) {\n      erreur = 'JSON Intake invalide : ' + e.message;\n    }\n  }\n}\nreturn [{ json: { ...dossier, intake, erreurs: erreur ? [erreur] : [],\n  journal: [...dossier.journal, { etape: 'intake', ok: !erreur, ts: new Date().toISOString() }] } }];"
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Valider JSON Intake",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "2. Document Agent (semaine 3)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 120]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "3. Vision Agent (semaine 3)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
+      "name": "4. Policy RAG Agent (semaine 3)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 480]
+    },
+    {
+      "parameters": { "numberInputs": 3 },
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
+      "name": "Fusion des 3 workers",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [1140, 300]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
+      "name": "5. Fraud Agent (semaine 4)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1360, 300]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "6. Decision Agent (semaine 4)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1580, 300]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0011-4000-8000-000000000011",
+      "name": "7. Report Agent (semaine 4)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1800, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0012-4000-8000-000000000012",
+      "name": "Réponse",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2020, 300]
+    }
+  ],
+  "connections": {
+    "Webhook dossier": { "main": [[{ "node": "Préparer le dossier", "type": "main", "index": 0 }]] },
+    "Préparer le dossier": { "main": [[{ "node": "1. Claim Intake Agent", "type": "main", "index": 0 }]] },
+    "1. Claim Intake Agent": { "main": [[{ "node": "Valider JSON Intake", "type": "main", "index": 0 }]] },
+    "Valider JSON Intake": { "main": [[
+      { "node": "2. Document Agent (semaine 3)", "type": "main", "index": 0 },
+      { "node": "3. Vision Agent (semaine 3)", "type": "main", "index": 0 },
+      { "node": "4. Policy RAG Agent (semaine 3)", "type": "main", "index": 0 }
+    ]] },
+    "2. Document Agent (semaine 3)": { "main": [[{ "node": "Fusion des 3 workers", "type": "main", "index": 0 }]] },
+    "3. Vision Agent (semaine 3)": { "main": [[{ "node": "Fusion des 3 workers", "type": "main", "index": 1 }]] },
+    "4. Policy RAG Agent (semaine 3)": { "main": [[{ "node": "Fusion des 3 workers", "type": "main", "index": 2 }]] },
+    "Fusion des 3 workers": { "main": [[{ "node": "5. Fraud Agent (semaine 4)", "type": "main", "index": 0 }]] },
+    "5. Fraud Agent (semaine 4)": { "main": [[{ "node": "6. Decision Agent (semaine 4)", "type": "main", "index": 0 }]] },
+    "6. Decision Agent (semaine 4)": { "main": [[{ "node": "7. Report Agent (semaine 4)", "type": "main", "index": 0 }]] },
+    "7. Report Agent (semaine 4)": { "main": [[{ "node": "Réponse", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}
