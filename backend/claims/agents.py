@@ -3,19 +3,17 @@ import json
 import math
 import mimetypes
 from functools import lru_cache
+from pathlib import Path
 
 import requests
 from django.conf import settings
 from pydantic import BaseModel, Field
 
 
-POLICY_ARTICLES = [
-    {"article": "Article 12", "topic": "collision", "text": "Les dommages causés au véhicule assuré par une collision sont couverts lorsque la garantie dommages collision est active."},
-    {"article": "Article 18", "topic": "délai de déclaration", "text": "Le sinistre doit être déclaré dans un délai maximal de cinq jours ouvrés après sa découverte."},
-    {"article": "Article 21", "topic": "bris de glace", "text": "Le pare-brise, les vitres latérales et la lunette arrière sont couverts par la garantie bris de glace, sous déduction de la franchise contractuelle."},
-    {"article": "Article 24", "topic": "vol", "text": "La garantie vol exige une déclaration aux autorités et la remise du récépissé de dépôt de plainte."},
-    {"article": "Article 27", "topic": "exclusion", "text": "Les dommages intentionnels causés par l'assuré sont exclus de la couverture."},
-]
+POLICY_CORPUS_PATH = Path(__file__).with_name("policy_corpus.json")
+with POLICY_CORPUS_PATH.open(encoding="utf-8") as corpus_file:
+    POLICY_CORPUS = json.load(corpus_file)
+POLICY_PDF_PATH = Path(__file__).parent / "corpus" / "axa_mon_auto_septembre_2026.pdf"
 
 
 class DocumentFacts(BaseModel):
@@ -95,26 +93,67 @@ def _read_document(document):
     return ""
 
 
+@lru_cache(maxsize=1)
+def _whisper_model():
+    from faster_whisper import WhisperModel
+    return WhisperModel(
+        settings.WHISPER_MODEL,
+        device=settings.WHISPER_DEVICE,
+        compute_type=settings.WHISPER_COMPUTE_TYPE,
+        download_root=settings.WHISPER_MODEL_CACHE,
+    )
+
+
+def _transcribe_audio(document):
+    segments, info = _whisper_model().transcribe(
+        document.file.path,
+        language=settings.WHISPER_LANGUAGE,
+        beam_size=5,
+        vad_filter=True,
+        condition_on_previous_text=False,
+    )
+    text = " ".join(segment.text.strip() for segment in segments if segment.text.strip()).strip()
+    return {
+        "file": document.original_name,
+        "text": text,
+        "language": info.language,
+        "language_probability": round(float(info.language_probability), 4),
+        "duration_seconds": round(float(info.duration), 2),
+        "engine": "faster-whisper",
+        "model": settings.WHISPER_MODEL,
+    }
+
+
 def document_agent(claim):
     documents = list(claim.documents.all())
     metadata = [{"kind": d.kind, "original_name": d.original_name, "mime_type": d.mime_type} for d in documents]
+    audio_transcriptions = []
+    extraction_errors = []
+    if settings.WHISPER_ENABLED:
+        for document in (d for d in documents if d.kind == "AUDIO"):
+            try:
+                audio_transcriptions.append(_transcribe_audio(document))
+            except Exception as exc:
+                extraction_errors.append(f"Audio {document.original_name}: {type(exc).__name__}")
     facts = {
         "incident_date": claim.incident_date.isoformat(), "location": claim.location,
         "description": claim.description, "policy_number": claim.policy_number,
         "vehicle_registration": None, "parties": [], "declared_amount": None,
         "missing_documents": [] if documents else ["supporting_document"],
-        "extraction_notes": ["Fallback déterministe: Ollama désactivé ou indisponible."],
+        "extraction_notes": extraction_errors or ["Fallback déterministe: Ollama désactivé ou indisponible."],
     }
     engine = "local-fallback"
     if _provider_enabled():
-        texts = [f"--- {d.kind}: {d.original_name} ---\n{_read_document(d)}" for d in documents if d.kind != "PHOTO"]
+        texts = [f"--- {d.kind}: {d.original_name} ---\n{_read_document(d)}" for d in documents if d.kind not in {"PHOTO", "AUDIO"}]
+        texts.extend(f"--- AUDIO TRANSCRIT: {item['file']} ---\n{item['text']}" for item in audio_transcriptions)
         prompt = f"FORMULAIRE\nDate: {claim.incident_date}\nLieu: {claim.location}\nPolice: {claim.policy_number}\nDéclaration: {claim.description}\n\nDOCUMENTS\n" + ("\n".join(texts) or "Aucun texte extractible")
         try:
             facts = _parse("document", DocumentFacts, "Extrais les faits du sinistre. N'invente rien; utilise null ou une liste vide si une donnée manque.", prompt)
+            facts["extraction_notes"].extend(extraction_errors)
             engine = "ollama"
         except Exception as exc:
             facts["extraction_notes"] = [f"Fallback local: {type(exc).__name__} lors de l'appel Ollama."]
-    return {"agent": "document", "engine": engine, "model": _model("document") if engine != "local-fallback" else None, "claim_facts": {k: v for k, v in facts.items() if k not in {"missing_documents", "extraction_notes"}}, "documents": metadata, "missing_documents": facts["missing_documents"], "extraction_notes": facts["extraction_notes"]}
+    return {"agent": "document", "engine": engine, "model": _model("document") if engine != "local-fallback" else None, "speech_to_text": {"engine": "faster-whisper", "model": settings.WHISPER_MODEL, "enabled": settings.WHISPER_ENABLED}, "audio_transcriptions": audio_transcriptions, "claim_facts": {k: v for k, v in facts.items() if k not in {"missing_documents", "extraction_notes"}}, "documents": metadata, "missing_documents": facts["missing_documents"], "extraction_notes": facts["extraction_notes"]}
 
 
 def _image_content(documents):
@@ -160,45 +199,77 @@ def _embedding(text):
     return tuple(response.json()["embeddings"][0])
 
 
+@lru_cache(maxsize=1)
+def _policy_chunks():
+    from pypdf import PdfReader
+    reader = PdfReader(POLICY_PDF_PATH)
+    first_page = POLICY_CORPUS["indexed_pdf_pages"]["from"]
+    last_page = POLICY_CORPUS["indexed_pdf_pages"]["to"]
+    chunks = []
+    for page_number in range(first_page, last_page + 1):
+        text = "\n".join(line.strip() for line in (reader.pages[page_number - 1].extract_text() or "").splitlines() if line.strip())
+        if len(text) < 80:
+            continue
+        chunks.append({
+            "chunk_id": f"axa-mon-auto-2026-p{page_number}",
+            "page": page_number,
+            "section": next((line for line in text.splitlines()[1:8] if len(line) > 8), "Conditions générales Mon Auto"),
+            "text": text[:12000],
+            "source": POLICY_CORPUS["title"],
+            "insurer": POLICY_CORPUS["insurer"],
+            "version": POLICY_CORPUS["version"],
+            "source_url": POLICY_CORPUS["source_url"],
+        })
+    return chunks
+
+
+@lru_cache(maxsize=1)
+def _policy_chunk_embeddings():
+    chunks = _policy_chunks()
+    response = requests.post(
+        f"{settings.OLLAMA_BASE_URL}/api/embed",
+        json={"model": _model("embedding"), "input": [chunk["text"] for chunk in chunks]},
+        timeout=max(settings.AI_REQUEST_TIMEOUT, 600),
+    )
+    response.raise_for_status()
+    return tuple(tuple(vector) for vector in response.json()["embeddings"])
+
+
 def _retrieve(query):
     query_vector = _embedding(query)
-    ranked = [(_cosine(query_vector, _embedding(f"{a['topic']}\n{a['text']}")), a) for a in POLICY_ARTICLES]
-    return [{**article, "similarity": round(score, 4)} for score, article in sorted(ranked, reverse=True, key=lambda x: x[0])[:3]]
+    ranked = [(_cosine(query_vector, vector), chunk) for vector, chunk in zip(_policy_chunk_embeddings(), _policy_chunks())]
+    return [{**chunk, "similarity": round(score, 4)} for score, chunk in sorted(ranked, reverse=True, key=lambda x: x[0])[:5]]
 
 
 def _local_retrieve(query):
     normalized = query.lower()
     words = set(normalized.replace("'", " ").split())
-    intent_terms = {
-        "collision": {"accident", "collision", "choc", "frontal", "arrière"},
-        "délai de déclaration": {"retard", "délai", "jours", "hier"},
-        "bris de glace": {"vitre", "pare-brise", "glace"},
-        "vol": {"vol", "volé", "dérobé"},
-        "exclusion": {"intentionnel", "volontaire"},
-    }
     ranked = []
-    for article in POLICY_ARTICLES:
-        lexical = len(words & set(f"{article['topic']} {article['text']}".lower().split()))
-        intent = sum(3 for term in intent_terms[article["topic"]] if term in normalized)
-        ranked.append((lexical + intent, article))
-    return [{**a, "similarity": None} for score, a in sorted(ranked, reverse=True, key=lambda x: x[0])[:3] if score]
+    intent_terms = {"accident", "collision", "choc", "dommages", "sinistre", "arrière", "véhicule"}
+    for chunk in _policy_chunks():
+        chunk_words = set(chunk["text"].lower().replace("'", " ").split())
+        lexical = len(words & chunk_words)
+        intent = sum(2 for term in intent_terms if term in normalized and term in chunk_words)
+        ranked.append((lexical + intent, chunk))
+    return [{**chunk, "similarity": None} for score, chunk in sorted(ranked, reverse=True, key=lambda x: x[0])[:5] if score]
 
 
 def policy_agent(claim):
     query = f"{claim.description}\nDate: {claim.incident_date}\nLieu: {claim.location}"
     retrieved = _local_retrieve(query)
     selected = retrieved[0] if retrieved else None
-    analysis = {"coverage_status": "covered" if selected else "insufficient_information", "applicable_articles": [selected["article"]] if selected else [], "explanation": selected["text"] if selected else "Aucun article pertinent retrouvé.", "missing_information": [], "confidence": 0.45 if selected else 0.2}
+    analysis = {"coverage_status": "insufficient_information", "applicable_articles": [], "explanation": "Des passages contractuels ont été retrouvés, mais le fallback lexical ne décide pas seul de la couverture.", "missing_information": ["Conditions particulières et garanties souscrites"], "confidence": 0.25 if selected else 0.1}
     engine = "local-fallback"
     if _provider_enabled():
         try:
             retrieved = _retrieve(query)
-            context = "\n\n".join(f"{a['article']} — {a['topic']}\n{a['text']}" for a in retrieved)
-            analysis = _parse("policy", PolicyAnalysis, "Vérifie la couverture uniquement avec les articles fournis. coverage_status: covered, excluded ou insufficient_information. Cite les numéros exacts.", f"SINISTRE\n{query}\n\nARTICLES\n{context}")
+            context = "\n\n".join(f"[Page {a['page']} - {a['section']}]\n{a['text']}" for a in retrieved)
+            analysis = _parse("policy", PolicyAnalysis, "Vérifie la couverture uniquement avec les extraits contractuels AXA fournis. coverage_status: covered, excluded ou insufficient_information. Les garanties dépendent aussi des Conditions particulières : si elles manquent et empêchent une conclusion certaine, réponds insufficient_information. Dans applicable_articles, cite les pages sous la forme 'Page 42'.", f"SINISTRE\n{query}\n\nEXTRAITS CONTRACTUELS\n{context}")
             engine = "ollama-rag"
         except Exception as exc:
             analysis["explanation"] += f" Fallback local ({type(exc).__name__})."
-    refs = [a for a in retrieved if a["article"] in analysis["applicable_articles"]]
+    cited_pages = {int(value.lower().replace("page", "").strip()) for value in analysis["applicable_articles"] if value.lower().replace("page", "").strip().isdigit()}
+    refs = [chunk for chunk in retrieved if chunk["page"] in cited_pages] or retrieved[:3]
     return {"agent": "policy_rag", "engine": engine, "model": _model("policy") if engine != "local-fallback" else None, "embedding_model": _model("embedding") if engine != "local-fallback" else None, "coverage_status": analysis["coverage_status"], "references": refs, "retrieved_chunks": retrieved, "retrieval_query": query, "explanation": analysis["explanation"], "missing_information": analysis["missing_information"], "confidence": analysis["confidence"]}
 
 

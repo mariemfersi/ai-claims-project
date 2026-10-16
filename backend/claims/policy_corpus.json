@@ -1,0 +1,14 @@
+{
+  "corpus_id": "axa-mon-auto-fr-2026-09",
+  "title": "Conditions générales Mon Auto",
+  "insurer": "AXA France",
+  "country": "France",
+  "origin": "Document contractuel public officiel publié par AXA France",
+  "status": "real_public_contract",
+  "version": "Septembre 2026",
+  "source_url": "https://media.axa.fr/content/dam/axa-fr/image/particuliers/auto/documents-informations/auto/pdf-mon-auto-cg.pdf",
+  "source_file": "claims/corpus/axa_mon_auto_septembre_2026.pdf",
+  "page_count": 104,
+  "indexed_pdf_pages": {"from": 5, "to": 103},
+  "warning": "Les garanties applicables à un assuré dépendent aussi de ses Conditions particulières. Le RAG ne remplace pas la validation contractuelle."
+}

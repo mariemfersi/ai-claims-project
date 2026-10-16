@@ -4,7 +4,7 @@ import {
   Database, FileSearch, Gauge, GitBranch, Image, LayoutDashboard,
   LoaderCircle, Plus, RefreshCw, ShieldCheck, Upload, XCircle,
 } from "lucide-react";
-import { createClaim, getClaim, getSystemInfo, listClaims, retryClaim } from "./api";
+import { createClaim, getClaim, getSystemInfo, listClaims, retryClaim, updateClaimFiles } from "./api";
 
 const EMPTY_FORM = {
   customer_name: "",
@@ -37,6 +37,8 @@ function App() {
   const [error, setError] = useState("");
   const [view, setView] = useState("dashboard");
   const [systemInfo, setSystemInfo] = useState(null);
+  const [supplementClaim, setSupplementClaim] = useState(null);
+  const [supplementFiles, setSupplementFiles] = useState([]);
 
   async function refreshClaims() {
     try {
@@ -77,6 +79,23 @@ function App() {
       setForm(EMPTY_FORM);
       setFiles([]);
       setShowForm(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitSupplement(event, keepDocumentIds) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const updated = await updateClaimFiles(supplementClaim.id, supplementFiles, keepDocumentIds);
+      setSelected(updated);
+      setClaims((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setSupplementClaim(null);
+      setSupplementFiles([]);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -141,13 +160,14 @@ function App() {
             </div>
           </div>
           <div className="detail-panel">
-            {selected ? <ClaimDetail claim={selected} onRetry={async () => setSelected(await retryClaim(selected.id))} /> : <div className="empty detail-empty"><Bot size={38} /><h3>Sélectionnez un dossier</h3><p>La décision et les preuves apparaîtront ici.</p></div>}
+            {selected ? <ClaimDetail claim={selected} onRetry={async () => setSelected(await retryClaim(selected.id))} onAddFiles={() => setSupplementClaim(selected)} /> : <div className="empty detail-empty"><Bot size={38} /><h3>Sélectionnez un dossier</h3><p>La décision et les preuves apparaîtront ici.</p></div>}
           </div>
         </section>
         </> : <TracePage systemInfo={systemInfo} claims={claims} selected={selected} setSelected={setSelected} />}
       </main>
 
       {showForm && <ClaimModal form={form} setForm={setForm} files={files} setFiles={setFiles} busy={busy} onSubmit={submit} onClose={() => setShowForm(false)} />}
+      {supplementClaim && <SupplementModal claim={supplementClaim} files={supplementFiles} setFiles={setSupplementFiles} busy={busy} onSubmit={submitSupplement} onClose={() => { setSupplementClaim(null); setSupplementFiles([]); }} />}
     </div>
   );
 }
@@ -191,10 +211,10 @@ function TracePage({ systemInfo, claims, selected, setSelected }) {
     <section className="trace-grid">
       <article className="explain-card rag-card">
         <div className="trace-title"><Database /><div><h2>Corpus du Policy RAG</h2><p>{systemInfo.rag.mode}</p></div></div>
-        <div className="truth-banner"><AlertTriangle />Le MVP utilise une recherche par mots-clés. Il n'utilise pas encore d'embeddings ni de base vectorielle.</div>
+        <div className="truth-banner"><ShieldCheck />Le RAG interroge le contrat automobile officiel AXA indexé localement.</div>
         <dl className="tech-list"><div><dt>Modèle d'embeddings</dt><dd>{systemInfo.rag.embedding_model || "Aucun"}</dd></div><div><dt>Vector store</dt><dd>{systemInfo.rag.vector_store || "Aucun"}</dd></div><div><dt>Recherche</dt><dd>{systemInfo.rag.retrieval}</dd></div></dl>
-        <div className="corpus-list">{systemInfo.rag.documents.map((doc) => <div key={doc.article}><strong>{doc.article}</strong><span>{doc.topic}</span><p>{doc.text}</p></div>)}</div>
-        {results.policy?.references?.length > 0 && <div className="used-evidence"><strong>Article utilisé pour ce dossier</strong>{results.policy.references.map((ref) => <p key={ref.article}>{ref.article} · {ref.text}</p>)}</div>}
+        <div className="corpus-list">{systemInfo.rag.documents.map((doc) => <div key={doc.url || doc.title}><strong>{doc.title}</strong><span>{doc.insurer} · {doc.version}</span><p>{doc.pages} pages · <a href={doc.url} target="_blank" rel="noreferrer">source officielle</a></p></div>)}</div>
+        {results.policy?.references?.length > 0 && <div className="used-evidence"><strong>Passages utilisés pour ce dossier</strong>{results.policy.references.map((ref, index) => <p key={`${ref.page}-${index}`}>Page {ref.page || "?"} · {ref.section || ref.source} · {ref.text}</p>)}</div>}
       </article>
 
       <article className="explain-card">
@@ -236,7 +256,7 @@ function ClaimRow({ claim, active, onClick }) {
   </button>;
 }
 
-function ClaimDetail({ claim, onRetry }) {
+function ClaimDetail({ claim, onRetry, onAddFiles }) {
   const info = decisionInfo[claim.decision];
   const Icon = info?.icon || LoaderCircle;
   return <div className="detail-content">
@@ -250,8 +270,39 @@ function ClaimDetail({ claim, onRetry }) {
     {claim.status === "COMPLETED" && <>
       <div className="score-grid"><div><span>Confiance</span><strong>{Math.round((claim.confidence || 0) * 100)}%</strong></div><div><span>Score de risque</span><strong>{claim.risk_score ?? 0}/100</strong></div><div><span>Documents</span><strong>{claim.documents.length}</strong></div></div>
       <section className="evidence"><h3>Justification</h3>{claim.reasons.map((reason, index) => <p key={index}><CheckCircle2 size={17} />{reason}</p>)}</section>
-      <section className="evidence"><h3>Références du contrat</h3>{claim.policy_references.length ? claim.policy_references.map((ref, index) => <p key={index}><ShieldCheck size={17} />{ref.article} · {ref.text}</p>) : <p>Aucune référence retournée.</p>}</section>
+      <section className="evidence"><h3>Références du contrat</h3>{claim.policy_references.length ? claim.policy_references.map((ref, index) => <p key={index}><ShieldCheck size={17} />Page {ref.page || "?"} · {ref.section || ref.source} · {ref.text}</p>) : <p>Aucune référence retournée.</p>}</section>
     </>}
+    {["COMPLETED", "FAILED"].includes(claim.status) && <div className="detail-actions"><button className="primary" onClick={onAddFiles}><Upload size={17} />Gérer les pièces et relancer</button></div>}
+  </div>;
+}
+
+function SupplementModal({ claim, files, setFiles, busy, onSubmit, onClose }) {
+  const [keptIds, setKeptIds] = useState(() => claim.documents.map((document) => String(document.id)));
+  const changed = files.length > 0 || keptIds.length !== claim.documents.length;
+  const removeDocument = (documentId) => setKeptIds((current) => current.filter((id) => id !== String(documentId)));
+  const replaceDocument = (documentId, replacement) => {
+    if (!replacement) return;
+    removeDocument(documentId);
+    setFiles((current) => [...Array.from(current), replacement]);
+  };
+  const addFiles = (selectedFiles) => setFiles((current) => [...Array.from(current), ...Array.from(selectedFiles)]);
+  return <div className="modal-backdrop">
+    <form className="modal supplement-modal" onSubmit={(event) => onSubmit(event, keptIds)}>
+      <div className="modal-header"><div><span className="eyebrow">DOSSIER #{claim.id.slice(0, 8).toUpperCase()}</span><h2>Gérer les pièces</h2></div><button type="button" className="close" onClick={onClose}>×</button></div>
+      <p className="supplement-note">Conserve, remplace ou supprime les anciennes pièces, puis ajoute les nouvelles. La prochaine analyse utilisera uniquement la liste finale ci-dessous.</p>
+      <div className="existing-files">
+        <strong>Pièces actuelles</strong>
+        {claim.documents.length === 0 && <p>Aucune pièce actuelle.</p>}
+        {claim.documents.map((document) => keptIds.includes(String(document.id)) && <div className="file-editor-row" key={document.id}>
+          <div><strong>{document.original_name}</strong><span>{document.kind}</span></div>
+          <label className="replace-button">Remplacer<input type="file" onChange={(event) => replaceDocument(document.id, event.target.files[0])} /></label>
+          <button type="button" className="delete-file" onClick={() => removeDocument(document.id)}>Supprimer</button>
+        </div>)}
+      </div>
+      <label className="upload-zone"><Upload size={24} /><strong>Ajouter de nouvelles pièces</strong><span>PDF, images, WAV, MP3 ou M4A</span><input type="file" multiple onChange={(event) => addFiles(event.target.files)} /></label>
+      {files.length > 0 && <div className="new-files"><strong>Nouveaux fichiers</strong>{Array.from(files).map((file, index) => <div key={`${file.name}-${index}`}><span>{file.name}</span><button type="button" onClick={() => setFiles((current) => Array.from(current).filter((_, itemIndex) => itemIndex !== index))}>Retirer</button></div>)}</div>}
+      <div className="modal-actions"><button type="button" className="secondary" onClick={onClose}>Annuler</button><button className="primary" disabled={busy || !changed}>{busy ? "Envoi..." : "Enregistrer et relancer"}</button></div>
+    </form>
   </div>;
 }
 

@@ -41,8 +41,11 @@ Définir `N8N_WEBHOOK_URL=` dans `.env`. Les dossiers restent au statut `SUBMITT
 ## Modèles
 
 - Document Agent : `qwen3:4b`, avec PyPDF pour le texte natif et le VLM/OCR pour les images.
+- Déclarations audio : `faster-whisper` avec le modèle local `small` en français, CPU int8.
 - Vision Agent : `qwen3-vl:4b`.
 - Policy RAG Agent : `qwen3:4b` et `qwen3-embedding:0.6b`.
 
 Ollama est l'unique moteur d'IA du projet. Si Ollama est fermé ou si un modèle manque, les agents reviennent à leur fallback déterministe sans arrêter le workflow.
+
+Le Policy RAG utilise les Conditions générales réelles et publiques AXA France « Mon Auto », version septembre 2026. Le PDF officiel de 104 pages est conservé dans `backend/claims/corpus/axa_mon_auto_septembre_2026.pdf`; sa provenance et son URL sont décrites dans `backend/claims/policy_corpus.json`. Les pages 5 à 103 sont extraites et indexées, puis les cinq pages les plus proches de la déclaration sont transmises au modèle. La couverture finale dépend néanmoins des Conditions particulières du contrat de l'assuré.
 

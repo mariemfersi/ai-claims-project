@@ -20,6 +20,7 @@ services:
     volumes:
       - ./backend:/app
       - ./media:/app/media
+      - whisper_models:/models/faster-whisper
     ports:
       - "8000:8000"
     extra_hosts:
@@ -61,4 +62,5 @@ services:
 volumes:
   postgres_data:
   n8n_data:
+  whisper_models:
 

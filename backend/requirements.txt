@@ -6,4 +6,7 @@ psycopg[binary]==3.2.5
 requests==2.32.3
 pydantic>=2.10,<3
 pypdf>=5.3,<7
+faster-whisper>=1.2,<2
+# Faster-Whisper 1.2.1 utilise encore metadata_errors, retiré dans PyAV 19.
+av>=11,<19
 

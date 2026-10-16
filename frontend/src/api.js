@@ -27,6 +27,14 @@ export async function retryClaim(id) {
   return parseResponse(await fetch(`${API_URL}/claims/${id}/retry/`, { method: "POST" }));
 }
 
+export async function updateClaimFiles(id, files, keepDocumentIds) {
+  const body = new FormData();
+  Array.from(files).forEach((file) => body.append("files", file));
+  keepDocumentIds.forEach((documentId) => body.append("keep_document_ids", documentId));
+  if (!keepDocumentIds.length) body.append("keep_document_ids", "");
+  return parseResponse(await fetch(`${API_URL}/claims/${id}/add-files/`, { method: "POST", body }));
+}
+
 export async function getSystemInfo() {
   return parseResponse(await fetch(`${API_URL}/system/info/`));
 }
