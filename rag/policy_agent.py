@@ -1,4 +1,4 @@
-"""Policy Agent v1 : analyse de couverture d'un dossier à partir du JSON de l'Intake Agent.
+"""Policy Agent v2 : analyse de couverture d'un dossier à partir du JSON de l'Intake Agent.
 
 Usage :
     python rag/policy_agent.py D01 D02 D07     # test sur des dossiers synthétiques
@@ -7,34 +7,46 @@ Usage :
     resultat = analyse_couverture(intake)
 
 Étapes :
-1. 3 à 5 sous-questions déterministes à partir du dossier (garantie, exclusions,
-   franchise, délai de déclaration, conducteur si ce n'est pas le souscripteur).
+1. 3 à 5 sous-questions déterministes à partir du dossier et des conditions particulières
+   (garantie souscrite, exclusions, franchise ou responsabilité, délai de déclaration,
+   conducteur s'il n'est pas désigné au contrat).
 2. Reformulation par Gemini dans le vocabulaire du contrat et du Code (prompt R1,
    prompts/PROMPTS.md). En cas d'échec, on garde les questions d'origine.
 3. retriever.search(k=5) sur chaque question (origine + reformulée) ; fusion par
-   article (somme des scores RRF), au plus 8 articles.
-4. Réponse de couverture par Gemini (prompt P4), en JSON uniquement.
+   article (somme des scores RRF), au plus 8 articles dont au moins 4 du contrat quand
+   il y en a parmi les résultats.
+4. Réponse de couverture par Gemini (prompt P4 v2), en JSON uniquement. Le prompt reçoit
+   le dossier, les conditions particulières et les articles dans trois sections distinctes ;
+   au-delà de ~6 000 tokens, chaque article est réduit à son chunk le mieux classé.
 5. Contrôle : un article cité qui n'a pas été fourni est retiré et la confiance baisse ;
    JSON invalide, aucun article valide ou erreur d'appel → verdict « indetermine ».
 
 Configuration : GEMINI_API_KEY (obligatoire, jamais dans le code), GEMINI_MODEL
 (défaut : gemini-3.8-flash, modèle stable de la documentation Gemini en octobre 2026).
-Appel via l'endpoint compatible OpenAI, comme le workflow n8n.
+Appel via l'endpoint compatible OpenAI, comme le workflow n8n, avec reasoning_effort
+(documenté pour cet endpoint : minimal, low, medium, high) pris dans
+GEMINI_REASONING_EFFORT, « low » par défaut ; une valeur vide ne l'envoie pas.
+La trace contient la taille du prompt P4 et la durée de chaque appel.
 
-Extension du schéma P1 : un champ optionnel « souscripteur » permet de savoir si le
-conducteur est une autre personne ; sans lui, la question conducteur n'est posée que
-si l'intake mentionne un conducteur.
+Champs ajoutés au schéma P1 (optionnels) :
+- conditions_particulieres : {garanties, usage_declare, conducteurs_designes, date_souscription},
+  ce qui a été souscrit et déclaré (contrat_reference dans les dossiers de test) ;
+- souscripteur : nom du souscripteur, utilisé seulement si conducteurs_designes est absent.
 """
 import json, os, re, sys, time, urllib.error, urllib.request
 from pathlib import Path
+from chunking import n_tokens
 
 ROOT = Path(__file__).resolve().parent.parent
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 DEFAULT_MODEL = "gemini-3.8-flash"
 MAX_ATTEMPTS = 3          # 1 appel + 2 nouveaux essais
+TIMEOUT_S = 120
 RETRYABLE_HTTP = {429, 500, 502, 503, 504}
 K_PAR_QUESTION = 5
 MAX_ARTICLES = 8
+MIN_ARTICLES_CONTRAT = 4
+MAX_PROMPT_TOKENS = 6000  # estimation cl100k ; au-delà, un seul chunk par article
 VERDICTS = {"couvert", "non_couvert", "partiel", "indetermine"}
 CONFIANCES = ["haute", "moyenne", "basse"]
 
@@ -74,15 +86,24 @@ Règles :
 - Ne cite pas de numéro d'article."""
 
 PROMPT_P4 = """Tu es un analyste couverture dans un service de gestion des sinistres automobiles.
-On te donne un dossier (JSON de l'Intake Agent) et des extraits d'articles : le contrat de l'assuré
-(source: contrat) et le Code des assurances (source: code_assurances).
-Tu dois dire si le sinistre est couvert, en t'appuyant uniquement sur ces extraits.
+On te donne trois sections :
+1. le dossier (JSON de l'Intake Agent) : les faits du sinistre ;
+2. les conditions particulières du contrat de l'assuré : ce qui a été souscrit et déclaré
+   (garanties souscrites, usage déclaré du véhicule, conducteurs désignés, date de souscription) ;
+3. des extraits d'articles : le contrat (source: contrat) et le Code des assurances
+   (source: code_assurances), qui indiquent les règles.
+Tu dois dire si le sinistre est couvert : compare les faits du dossier aux conditions particulières,
+puis applique les règles des articles fournis.
 
 Règles :
-- N'affirme rien qui ne soit pas fondé sur un article fourni, et cite cet article par son identifiant
-  exact tel qu'il apparaît dans [Article ...] (ex. "15", "L113-2"). N'utilise aucune autre connaissance.
-- Cite d'abord les articles du contrat, puis ceux du Code des assurances.
-- Si les extraits ne permettent pas de conclure, ou si un fait nécessaire manque dans le dossier,
+- N'affirme rien qui ne soit pas fondé sur un article fourni ou sur les conditions particulières.
+  Cite chaque article par son identifiant exact tel qu'il apparaît dans [Article ...] (ex. "15", "L113-2") ;
+  pour un fait tiré des conditions particulières, écris "(conditions particulières)". N'utilise aucune
+  autre connaissance.
+- Une garantie qui ne figure pas dans les conditions particulières n'est pas souscrite.
+- Cite d'abord les articles du contrat, puis ceux du Code des assurances. "articles_cites" ne contient
+  que des identifiants d'articles fournis.
+- Si les éléments fournis ne permettent pas de conclure, ou si un fait nécessaire manque dans le dossier,
   réponds "indetermine" et explique ce qui manque. Ne devine pas.
 - "partiel" : le sinistre est couvert mais avec une limite (franchise majorée, garantie réduite,
   responsabilité partagée) qui réduit nettement l'indemnisation.
@@ -95,7 +116,7 @@ Schéma :
   "franchise": {"montant": "string | null", "article": "string | null", "detail": "string"} | null,
   "verdict_couverture": "couvert | non_couvert | partiel | indetermine",
   "articles_cites": ["string"],
-  "justification": "3 à 6 phrases, chaque affirmation suivie de l'article entre parenthèses",
+  "justification": "3 à 6 phrases, chaque affirmation suivie de l'article ou de (conditions particulières) entre parenthèses",
   "confiance": "haute | moyenne | basse"
 }"""
 
@@ -104,33 +125,48 @@ class GeminiError(Exception):
     pass
 
 
-def call_gemini(system, user):
-    """Appel Gemini en mode JSON. Renvoie le texte brut ; GeminiError en cas d'échec définitif."""
+def call_gemini(system, user, etape="", journal=None):
+    """Appel Gemini en mode JSON. Renvoie le texte brut ; GeminiError en cas d'échec définitif.
+    Chaque essai est ajouté à journal : {etape, essai, statut, duree_s}."""
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise GeminiError("GEMINI_API_KEY non défini")
-    body = json.dumps({"model": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL), "temperature": 0,
-                       "response_format": {"type": "json_object"},
-                       "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]})
+    params = {"model": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL), "temperature": 0,
+              "response_format": {"type": "json_object"},
+              "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
+    effort = os.environ.get("GEMINI_REASONING_EFFORT", "low")
+    if effort:
+        params["reasoning_effort"] = effort
+    body = json.dumps(params)
+    journal = journal if journal is not None else []
     req = urllib.request.Request(GEMINI_URL, data=body.encode(), method="POST",
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     last = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
+        t0 = time.perf_counter()
+
+        def log(statut):
+            journal.append({"etape": etape, "essai": attempt, "statut": statut,
+                            "duree_s": round(time.perf_counter() - t0, 1)})
         try:
-            with urllib.request.urlopen(req, timeout=60) as r:
+            with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
                 data = json.loads(r.read())
             content = data["choices"][0]["message"]["content"]
             if not isinstance(content, str):
                 raise GeminiError("réponse sans contenu texte")
+            log("ok")
             return content
         except urllib.error.HTTPError as e:
             last = f"HTTP {e.code}"
+            log(last)
             if e.code not in RETRYABLE_HTTP:  # 400, 401, 403 : inutile de réessayer
                 raise GeminiError(f"{last} : {e.read()[:300].decode(errors='replace')}")
             wait = float(e.headers.get("Retry-After") or 2 ** attempt)
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             last, wait = f"réseau : {e}", 2 ** attempt
+            log(last)
         except (KeyError, IndexError, json.JSONDecodeError) as e:
+            log("réponse inattendue")
             raise GeminiError(f"réponse inattendue : {e!r}")
         if attempt < MAX_ATTEMPTS:
             time.sleep(min(wait, 30))
@@ -150,7 +186,7 @@ def parse_json(text):
 def sous_questions(intake):
     """3 à 5 questions en langage courant, construites à partir des champs de l'intake.
 
-    Avec garanties_souscrites, la question « garantie » nomme la garantie souscrite qui
+    Avec conditions_particulieres.garanties, la question « garantie » nomme la garantie souscrite qui
     correspond au type de sinistre. Avec un tiers impliqué, la question « responsabilité »
     (partage, constat, effet sur la franchise) remplace la question « franchise »."""
     type_sinistre = intake.get("type_sinistre")
@@ -160,7 +196,8 @@ def sous_questions(intake):
     avec_tiers = {True: " avec un tiers impliqué", False: " sans tiers impliqué"}.get(tiers, "")
     if type_sinistre == "sortie_de_route":
         avec_tiers = ""  # déjà dit par « sans autre véhicule »
-    souscrites = intake.get("garanties_souscrites")
+    cp = intake.get("conditions_particulieres") or {}
+    souscrites = cp.get("garanties")
     if souscrites is None:
         garantie = f"Quelle garantie couvre un sinistre de type {t}{avec_tiers} ?"
     else:
@@ -174,26 +211,33 @@ def sous_questions(intake):
     qs = [("garantie", garantie),
           ("exclusions", f"Une exclusion de garantie s'applique-t-elle à ce sinistre ? Circonstances : {circ}"
            + (f" Usage du véhicule : {intake['usage_au_moment_du_sinistre']}."
-              if intake.get("usage_au_moment_du_sinistre") else ""))]
+              if intake.get("usage_au_moment_du_sinistre") else "")
+           + (f" Usage déclaré au contrat : {cp['usage_declare']}." if cp.get("usage_declare") else ""))]
     if tiers:
         qs.append(("responsabilite", "Comment la responsabilité est-elle partagée entre les conducteurs d'après le "
                                      "constat amiable, et quelle franchise s'applique selon ce partage ?"))
     else:
         qs.append(("franchise", f"Quelle franchise s'applique à un sinistre de type {t}{avec_tiers} ?"))
     qs.append(("delai_declaration", f"Quel est le délai pour déclarer un sinistre de type {t} ?"))
-    conducteur, souscripteur = intake.get("conducteur"), intake.get("souscripteur")
-    if conducteur and (not souscripteur or conducteur.strip().lower() != souscripteur.strip().lower()):
-        qs.append(("conducteur", "Le véhicule était conduit par une autre personne que le souscripteur : "
-                                 "que prévoit le contrat pour ce conducteur (désignation, prêt du volant, "
-                                 "ancienneté du permis) ?"))
+    conducteur = (intake.get("conducteur") or "").strip().lower()
+    designes = cp.get("conducteurs_designes")
+    if designes is not None:
+        autre = conducteur and conducteur not in {x.strip().lower() for x in designes}
+        qui = "une personne qui n'est pas conducteur désigné au contrat"
+    else:
+        autre = conducteur and conducteur != (intake.get("souscripteur") or "").strip().lower()
+        qui = "une autre personne que le souscripteur"
+    if autre:
+        qs.append(("conducteur", f"Le véhicule était conduit par {qui} : que prévoit le contrat pour ce "
+                                 "conducteur (désignation, prêt du volant, ancienneté du permis) ?"))
     return [{"id": i, "theme": th, "originale": q} for i, (th, q) in enumerate(qs, 1)]
 
 
-def reformuler(questions, avertissements):
+def reformuler(questions, avertissements, journal):
     user = json.dumps({"questions": [{"id": q["id"], "question": q["originale"]} for q in questions]},
                       ensure_ascii=False)
     try:
-        obj = parse_json(call_gemini(PROMPT_R1, user))
+        obj = parse_json(call_gemini(PROMPT_R1, user, "reformulation", journal))
     except GeminiError as e:
         avertissements.append(f"Reformulation impossible ({e}) : recherche avec les questions d'origine seulement.")
         return questions
@@ -207,7 +251,8 @@ def reformuler(questions, avertissements):
 
 
 def retrouver_articles(questions):
-    """Recherche pour chaque question (origine + reformulée), fusion par article."""
+    """Recherche pour chaque question (origine + reformulée), fusion par article.
+    Au plus MAX_ARTICLES, dont au moins MIN_ARTICLES_CONTRAT du contrat s'il y en a."""
     from retriever import search
     articles = {}
     for q in questions:
@@ -219,13 +264,45 @@ def retrouver_articles(questions):
                                                        "questions": set(), "parties": {}})
                 a["score"] += hit["scores"]["rrf"]  # trouvé par plusieurs questions → mieux classé
                 a["questions"].add(q["id"])
-                a["parties"][m.get("partie", 1)] = hit["text"]
-    best = sorted(articles.values(), key=lambda a: -a["score"])[:MAX_ARTICLES]
+                partie = m.get("partie", 1)
+                rrf = max(hit["scores"]["rrf"], a["parties"].get(partie, ("", 0))[1])
+                a["parties"][partie] = (hit["text"], rrf)
+    ranked = sorted(articles.values(), key=lambda a: -a["score"])
+    contrat = [a for a in ranked if a["source"] == "contrat"][:MIN_ARTICLES_CONTRAT]
+    reste = [a for a in ranked if a not in contrat][:MAX_ARTICLES - len(contrat)]
+    best = sorted(contrat + reste, key=lambda a: -a["score"])
     for a in best:
         a["questions"] = sorted(a["questions"])
-        a["texte"] = "\n".join(a["parties"][p] for p in sorted(a["parties"]))
+        a["texte"] = "\n".join(a["parties"][p][0] for p in sorted(a["parties"]))
+        a["meilleur_chunk"] = max(a["parties"].values(), key=lambda x: x[1])[0]
+        a["nb_chunks"] = len(a["parties"])
         del a["parties"]
     return best
+
+
+def prompt_p4(intake, fournis):
+    """Message utilisateur de P4 et sa taille. Au-delà de MAX_PROMPT_TOKENS, chaque article
+    est réduit à son chunk le mieux classé."""
+    dossier = {k: v for k, v in intake.items() if k not in ("souscripteur", "conditions_particulieres")}
+    cp = intake.get("conditions_particulieres")
+
+    def construire(reduit):
+        extraits = "\n\n".join(f"[Article {a['article']} — source: {a['source']} — {a['titre']}]\n"
+                                f"{a['meilleur_chunk'] if reduit else a['texte']}" for a in fournis)
+        return (f"## Dossier (faits du sinistre)\n{json.dumps(dossier, ensure_ascii=False, indent=1)}\n\n"
+                f"## Conditions particulières (ce qui a été souscrit et déclaré)\n"
+                f"{json.dumps(cp, ensure_ascii=False, indent=1) if cp else 'non fournies'}\n\n"
+                f"## Articles fournis ({len(fournis)}, les règles)\n\n{extraits}")
+
+    user = construire(False)
+    taille = {"caracteres": len(PROMPT_P4) + len(user), "tokens_estimes": n_tokens(PROMPT_P4 + user),
+              "reduit": False}
+    if taille["tokens_estimes"] > MAX_PROMPT_TOKENS:
+        avant = taille["tokens_estimes"]
+        user = construire(True)
+        taille = {"caracteres": len(PROMPT_P4) + len(user), "tokens_estimes": n_tokens(PROMPT_P4 + user),
+                  "reduit": True, "tokens_avant_reduction": avant}
+    return user, taille
 
 
 def norm_article(x):
@@ -285,22 +362,21 @@ def controler(rep, fournis, avertissements):
 
 
 def analyse_couverture(intake: dict) -> dict:
-    avertissements = []
-    questions = reformuler(sous_questions(intake), avertissements)
+    avertissements, journal = [], []
+    questions = reformuler(sous_questions(intake), avertissements, journal)
     fournis = retrouver_articles(questions)
-    trace = {"trace": {"modele": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL), "sous_questions": questions,
-                       "articles_fournis": [{k: v for k, v in a.items() if k != "texte"} for a in fournis],
-                       "avertissements": avertissements}}
+    trace = {"trace": {"modele": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL),
+                       "reasoning_effort": os.environ.get("GEMINI_REASONING_EFFORT", "low") or None,
+                       "sous_questions": questions,
+                       "articles_fournis": [{k: v for k, v in a.items() if k not in ("texte", "meilleur_chunk")}
+                                            for a in fournis],
+                       "appels": journal, "avertissements": avertissements}}
     if not fournis:
         return indetermine("Aucun article retrouvé pour ce dossier.", **trace)
 
-    extraits = "\n\n".join(f"[Article {a['article']} — source: {a['source']} — {a['titre']}]\n{a['texte']}"
-                           for a in fournis)
-    dossier = {k: v for k, v in intake.items() if k != "souscripteur"}  # le nom n'apporte rien à P4
-    user = (f"Dossier :\n{json.dumps(dossier, ensure_ascii=False, indent=1)}\n\n"
-            f"Articles fournis ({len(fournis)}) :\n\n{extraits}")
+    user, trace["trace"]["prompt_p4"] = prompt_p4(intake, fournis)
     try:
-        rep = parse_json(call_gemini(PROMPT_P4, user))
+        rep = parse_json(call_gemini(PROMPT_P4, user, "p4", journal))
     except GeminiError as e:
         return indetermine(f"Analyse impossible : appel Gemini en échec ({e}).", **trace)
     champs = {"garantie_applicable", "exclusions_applicables", "franchise", "verdict_couverture",
@@ -327,7 +403,7 @@ INTAKE_TEST = {
 }
 
 
-def intake_depuis_dossier(d, garanties_souscrites=None):
+def intake_depuis_dossier(d, conditions_particulieres=None):
     """Intake simple construit à partir d'un dossier synthétique, en attendant P1."""
     f = d.get("formulaire") or {}
     intake = {"date_sinistre": f.get("date_sinistre"), "heure": None, "lieu": (d.get("constat") or {}).get("lieu"),
@@ -335,14 +411,14 @@ def intake_depuis_dossier(d, garanties_souscrites=None):
               "conducteur": f.get("conducteur") or f.get("nom"), "souscripteur": f.get("nom"),
               "circonstances": d.get("declaration"), "zone_impact_declaree": None,
               "usage_au_moment_du_sinistre": None, "ecarts_formulaire": [], "remarques": [],
-              "garanties_souscrites": garanties_souscrites}
+              "conditions_particulieres": conditions_particulieres}
     return {**intake, **INTAKE_TEST.get(d["id"], {})}
 
 
 if __name__ == "__main__":
     data = json.loads((ROOT / "data/dossiers/dossiers_synthetiques.json").read_text(encoding="utf-8"))
-    garanties = data["contrat_reference"]["garanties"]
+    cp = data["contrat_reference"]
     for did in sys.argv[1:] or ["D01"]:
         d = next(x for x in data["dossiers"] if x["id"] == did)
         print(f"\n===== {did} — {d['scenario']} (attendu : {d['attendu']}) =====")
-        print(json.dumps(analyse_couverture(intake_depuis_dossier(d, garanties)), ensure_ascii=False, indent=2))
+        print(json.dumps(analyse_couverture(intake_depuis_dossier(d, cp)), ensure_ascii=False, indent=2))

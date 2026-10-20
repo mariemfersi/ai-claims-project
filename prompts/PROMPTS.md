@@ -7,7 +7,7 @@ Fichier versionné. Pour chaque prompt : rôle, technique, version, échecs obse
 | P1 — Compréhension de la déclaration | Claim Intake | v1 | rédigé, à tester |
 | P2 — Extraction du constat / facture | Document | v1 | rédigé, à tester |
 | P3 — Analyse des dommages | Vision | — | semaine 3 |
-| P4 — Réponse de couverture | Policy / RAG | v1 | rédigé, à tester |
+| P4 — Réponse de couverture | Policy / RAG | v2 | v1 testée (D01, D02, D07), v2 rédigée |
 | R1 — Reformulation des sous-questions | Policy / RAG | v1 | rédigé, à tester |
 | P5 — Détection d'incohérences | Fraud | — | semaine 3-4 |
 | P6 — Recommandation | Decision | — | semaine 4 |
@@ -221,4 +221,90 @@ Articles fournis (N) :
 - D07 : le modèle tranche (« couvert » ou « non_couvert ») au lieu de signaler l'ambiguïté (conducteur non désigné, jeune permis) ;
 - texte ajouté autour du JSON : toléré pour un bloc ```json, sinon verdict « indetermine ».
 
-**Échecs observés / correctifs / avant-après** : à remplir après les premiers tests.
+**Échecs observés (v1, premier test avec Gemini sur D01, D02, D07, `gemini-3.8-flash`)** :
+- **D02 (attendu : reject, article 15)** : verdict « indetermine ». L'agent identifie l'exclusion de l'article 15
+  (usage VTC non déclaré), mais écrit qu'il ne peut pas savoir quel usage a été déclaré au contrat. Cause : l'usage
+  déclaré (« privé et trajet travail ») existe dans les conditions particulières (`contrat_reference.usage_declare`),
+  mais il n'était pas transmis à P4. Le prompt n'est pas en faute : c'est une information manquante en entrée.
+- **D07** : pas de réponse, délai de 60 s dépassé 3 fois de suite. La taille du prompt et la durée des appels
+  n'étaient pas enregistrées, la cause (prompt trop long ou API lente) n'a donc pas pu être établie.
+- **D01 (attendu : accept)** : verdict « couvert », articles 6, 14, 21 cités, conforme. L'article 20 (tableau des
+  franchises) n'était pas parmi les articles fournis.
+
+**Correctifs (v2)** :
+- conditions particulières (garanties, usage déclaré, conducteurs désignés, date de souscription) transmises dans
+  une section distincte des articles, avec la règle : les conditions particulières disent ce qui a été souscrit et
+  déclaré, les articles disent les règles ;
+- au moins 4 articles du contrat parmi les 8 fournis (dans le code, `retrouver_articles`) ;
+- taille du prompt et durée de chaque appel enregistrées dans la trace ; au-delà de ~6 000 tokens, un seul chunk
+  par article ; délai porté à 120 s ; `reasoning_effort: "low"` (paramètre documenté de l'endpoint compatible OpenAI).
+
+### v2
+
+**Techniques ajoutées** : séparation explicite des faits (dossier), des éléments contractuels propres à l'assuré
+(conditions particulières) et des règles (articles) ; citation « (conditions particulières) » pour les faits
+contractuels, hors de `articles_cites` ; règle « une garantie absente des conditions particulières n'est pas souscrite ».
+
+```text
+SYSTEM
+Tu es un analyste couverture dans un service de gestion des sinistres automobiles.
+On te donne trois sections :
+1. le dossier (JSON de l'Intake Agent) : les faits du sinistre ;
+2. les conditions particulières du contrat de l'assuré : ce qui a été souscrit et déclaré
+   (garanties souscrites, usage déclaré du véhicule, conducteurs désignés, date de souscription) ;
+3. des extraits d'articles : le contrat (source: contrat) et le Code des assurances
+   (source: code_assurances), qui indiquent les règles.
+Tu dois dire si le sinistre est couvert : compare les faits du dossier aux conditions particulières,
+puis applique les règles des articles fournis.
+
+Règles :
+- N'affirme rien qui ne soit pas fondé sur un article fourni ou sur les conditions particulières.
+  Cite chaque article par son identifiant exact tel qu'il apparaît dans [Article ...] (ex. "15", "L113-2") ;
+  pour un fait tiré des conditions particulières, écris "(conditions particulières)". N'utilise aucune
+  autre connaissance.
+- Une garantie qui ne figure pas dans les conditions particulières n'est pas souscrite.
+- Cite d'abord les articles du contrat, puis ceux du Code des assurances. "articles_cites" ne contient
+  que des identifiants d'articles fournis.
+- Si les éléments fournis ne permettent pas de conclure, ou si un fait nécessaire manque dans le dossier,
+  réponds "indetermine" et explique ce qui manque. Ne devine pas.
+- "partiel" : le sinistre est couvert mais avec une limite (franchise majorée, garantie réduite,
+  responsabilité partagée) qui réduit nettement l'indemnisation.
+- Réponds UNIQUEMENT avec un objet JSON valide conforme au schéma ci-dessous, sans texte autour.
+
+Schéma :
+{
+  "garantie_applicable": {"nom": "string", "article": "string"} | null,
+  "exclusions_applicables": [{"article": "string", "motif": "string"}],
+  "franchise": {"montant": "string | null", "article": "string | null", "detail": "string"} | null,
+  "verdict_couverture": "couvert | non_couvert | partiel | indetermine",
+  "articles_cites": ["string"],
+  "justification": "3 à 6 phrases, chaque affirmation suivie de l'article ou de (conditions particulières) entre parenthèses",
+  "confiance": "haute | moyenne | basse"
+}
+
+USER
+## Dossier (faits du sinistre)
+{intake_json sans conditions_particulieres ni souscripteur}
+
+## Conditions particulières (ce qui a été souscrit et déclaré)
+{"garanties": [...], "usage_declare": "...", "conducteurs_designes": [...], "date_souscription": "AAAA-MM-JJ"}
+
+## Articles fournis (N, les règles)
+
+[Article <id> — source: <contrat|code_assurances> — <titre>]
+<chunks retrouvés de l'article ; au-delà de ~6 000 tokens, seulement le mieux classé>
+...
+```
+
+**Tests à faire** : D01 (accept), D02 (reject : l'usage VTC doit être comparé à l'usage déclaré ; vérifier si la
+justification distingue la fausse déclaration intentionnelle, L113-8, nullité, de la déclaration inexacte de bonne
+foi, L113-9, réduction de l'indemnité), D07 (investigate).
+
+**Échecs anticipés à vérifier** :
+- « (conditions particulières) » ou « conditions particulières » mis dans `articles_cites` : retiré par le contrôle,
+  avec baisse de confiance ;
+- D02 : « non_couvert » fondé sur l'article 15 seul, sans examiner L113-8 / L113-9 quand ils sont fournis ;
+- D07 : le conducteur (Youssef Ben Salah) n'est pas dans les conducteurs désignés ; le modèle doit appliquer
+  l'article 16 (franchise majorée) plutôt que conclure à une exclusion.
+
+**Échecs observés / correctifs / avant-après** : à remplir après le test de la v2.
