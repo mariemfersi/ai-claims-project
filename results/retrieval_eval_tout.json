@@ -1,0 +1,1953 @@
+{
+  "Taille fixe 500/50 + BM25": {
+    "hit@1": 0.40625,
+    "hit@3": 0.625,
+    "hit@5": 0.71875,
+    "MRR@5": 0.5135416666666667,
+    "tokens_top5": 2491.375,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "14",
+          "15",
+          "16"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q03",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16",
+          "17",
+          "18",
+          "19"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q04",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "R421-3",
+          "R421-4"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q06",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-5-2",
+          "L211-6",
+          "L211-7",
+          "L211-7-1"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q07",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "D113-7",
+          "R*113-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q09",
+        "rank": null,
+        "full_rank": 7,
+        "top1": [
+          "L113-1",
+          "L113-2"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q10",
+        "rank": null,
+        "full_rank": 6,
+        "top1": [
+          "L121-2",
+          "L121-3",
+          "L121-4"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q11",
+        "rank": 5,
+        "full_rank": 5,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q12",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "21",
+          "22",
+          "23",
+          "24",
+          "25"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16",
+          "17",
+          "18",
+          "19"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q15",
+        "rank": null,
+        "full_rank": 7,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q16",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-8",
+          "R211-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 36,
+        "top1": [
+          "A121-1-annexe-4",
+          "A121-1-annexe-5",
+          "A121-1-annexe-6"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q18",
+        "rank": 5,
+        "full_rank": 5,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q19",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q20",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q21",
+        "rank": 5,
+        "full_rank": 5,
+        "top1": [
+          "L211-28",
+          "D211-1"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q22",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L113-5-1",
+          "L113-6",
+          "L113-8",
+          "L113-9"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q23",
+        "rank": null,
+        "full_rank": 13,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q24",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "A125-6-4-2",
+          "A125-6-4-3",
+          "A125-6-5",
+          "L126-1"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q25",
+        "rank": null,
+        "full_rank": 13,
+        "top1": [
+          "L121-11",
+          "L121-12",
+          "L121-13"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q26",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "L125-2"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": 40,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q28",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "R211-29",
+          "R211-30",
+          "R211-31",
+          "R211-32"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-4",
+          "A121-1-annexe-5",
+          "A121-1-annexe-6"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q30",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "L127-2-3",
+          "L127-3",
+          "L127-4"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q31",
+        "rank": null,
+        "full_rank": 161,
+        "top1": [
+          "A211-11",
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 107,
+        "top1": [
+          "R421-68",
+          "R421-69"
+        ],
+        "top1_titre": null
+      }
+    ],
+    "n_chunks": 305
+  },
+  "Taille fixe 500/50 + Dense (multilingual-e5-small)": {
+    "hit@1": 0.3125,
+    "hit@3": 0.53125,
+    "hit@5": 0.5625,
+    "MRR@5": 0.41250000000000003,
+    "tokens_top5": 2491.375,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q02",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "R211-8",
+          "R211-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q03",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16",
+          "17",
+          "18",
+          "19"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q04",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q05",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q06",
+        "rank": null,
+        "full_rank": 21,
+        "top1": [
+          "L211-9",
+          "L211-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q07",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "14",
+          "15",
+          "16"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q08",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q09",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q10",
+        "rank": 5,
+        "full_rank": 5,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q11",
+        "rank": null,
+        "full_rank": 50,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q12",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "25",
+          "26"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q13",
+        "rank": null,
+        "full_rank": 6,
+        "top1": [
+          "R125-7",
+          "A125-2"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q14",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "L125-1"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q15",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q16",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "14",
+          "15",
+          "16"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 16,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q18",
+        "rank": null,
+        "full_rank": 37,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q19",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q20",
+        "rank": null,
+        "full_rank": 17,
+        "top1": [
+          "L211-7-1",
+          "L211-8",
+          "L211-9"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q21",
+        "rank": null,
+        "full_rank": 18,
+        "top1": [
+          "L112-2-1"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q22",
+        "rank": null,
+        "full_rank": 6,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q23",
+        "rank": null,
+        "full_rank": 10,
+        "top1": [
+          "R211-8",
+          "R211-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q24",
+        "rank": null,
+        "full_rank": 9,
+        "top1": [
+          "R421-1",
+          "R421-2"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q25",
+        "rank": null,
+        "full_rank": 27,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q26",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": 85,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q28",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-4",
+          "A121-1-annexe-5",
+          "A121-1-annexe-6"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q30",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-4-1",
+          "L211-5",
+          "L211-5-1",
+          "L211-5-2"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q31",
+        "rank": null,
+        "full_rank": 20,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 60,
+        "top1": [
+          "L211-1"
+        ],
+        "top1_titre": null
+      }
+    ],
+    "n_chunks": 305
+  },
+  "Taille fixe 500/50 + Hybride (RRF)": {
+    "hit@1": 0.5,
+    "hit@3": 0.65625,
+    "hit@5": 0.71875,
+    "MRR@5": 0.5921875,
+    "tokens_top5": 2491.375,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "14",
+          "15",
+          "16"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q03",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16",
+          "17",
+          "18",
+          "19"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q04",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q06",
+        "rank": null,
+        "full_rank": 6,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q07",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "14",
+          "15",
+          "16"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q09",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "R127-1",
+          "L128-1"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q10",
+        "rank": null,
+        "full_rank": 6,
+        "top1": [
+          "L121-18"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q11",
+        "rank": null,
+        "full_rank": 16,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q12",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "21",
+          "22",
+          "23",
+          "24",
+          "25"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10",
+          "11",
+          "12",
+          "13",
+          "14"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16",
+          "17",
+          "18",
+          "19"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q15",
+        "rank": null,
+        "full_rank": 7,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q16",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-8",
+          "R211-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 39,
+        "top1": [
+          "R211-8",
+          "R211-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q18",
+        "rank": 5,
+        "full_rank": 5,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q19",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18",
+          "19",
+          "20",
+          "21"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q20",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "A211-11-annexe",
+          "L421-1"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q21",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "14",
+          "15",
+          "16"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q22",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L113-5-1",
+          "L113-6",
+          "L113-8",
+          "L113-9"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q23",
+        "rank": 4,
+        "full_rank": 4,
+        "top1": [
+          "R211-14-0-1",
+          "R211-14"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q24",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "A211-11",
+          "A211-11-annexe"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q25",
+        "rank": null,
+        "full_rank": 12,
+        "top1": [
+          "L211-11",
+          "L211-12",
+          "L211-13",
+          "L211-14"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q26",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L121-18"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": 55,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q28",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-9",
+          "L211-10"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-4",
+          "A121-1-annexe-5",
+          "A121-1-annexe-6"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q30",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-4-1",
+          "L211-5",
+          "L211-5-1",
+          "L211-5-2"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q31",
+        "rank": null,
+        "full_rank": 54,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": null
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 104,
+        "top1": [
+          "R421-68",
+          "R421-69"
+        ],
+        "top1_titre": null
+      }
+    ],
+    "n_chunks": 305
+  },
+  "Par article + BM25": {
+    "hit@1": 0.5625,
+    "hit@3": 0.78125,
+    "hit@5": 0.8125,
+    "MRR@5": 0.6729166666666666,
+    "tokens_top5": 1359.65625,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q03",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q04",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "21"
+        ],
+        "top1_titre": "Responsabilité partagée et convention IRSA"
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q06",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-6"
+        ],
+        "top1_titre": "Clause de déchéance pour conduite en état d'ivresse ou sous stupéfiants réputée non écrite"
+      },
+      {
+        "id": "Q07",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "D113-7"
+        ],
+        "top1_titre": "Obligations de l'assureur et de l'assuré"
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "7"
+        ],
+        "top1_titre": "Dommages collision"
+      },
+      {
+        "id": "Q09",
+        "rank": null,
+        "full_rank": 60,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q10",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q11",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q12",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "24"
+        ],
+        "top1_titre": "Circuit de traitement d'un dossier"
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10"
+        ],
+        "top1_titre": "Incendie et événements climatiques"
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q15",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "12"
+        ],
+        "top1_titre": "Garantie du conducteur"
+      },
+      {
+        "id": "Q16",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-10"
+        ],
+        "top1_titre": "Exclusions autorisées : conducteur sans permis valide ou n'ayant pas l'âge requis, transport de personnes"
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 50,
+        "top1": [
+          "L421-1"
+        ],
+        "top1_titre": "Dispositions générales"
+      },
+      {
+        "id": "Q18",
+        "rank": 5,
+        "full_rank": 5,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": "Dispositions applicables à l'indemnisation des dommages aux biens"
+      },
+      {
+        "id": "Q19",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "2"
+        ],
+        "top1_titre": "Définitions"
+      },
+      {
+        "id": "Q20",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "13"
+        ],
+        "top1_titre": "Assistance"
+      },
+      {
+        "id": "Q21",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L113-8"
+        ],
+        "top1_titre": "Nullité du contrat pour fausse déclaration intentionnelle"
+      },
+      {
+        "id": "Q22",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L113-9"
+        ],
+        "top1_titre": "Omission ou déclaration inexacte de bonne foi : réduction proportionnelle de l'indemnité"
+      },
+      {
+        "id": "Q23",
+        "rank": null,
+        "full_rank": 10,
+        "top1": [
+          "R113-13"
+        ],
+        "top1_titre": "Obligations de l'assureur et de l'assuré"
+      },
+      {
+        "id": "Q24",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L121-1"
+        ],
+        "top1_titre": "Principe indemnitaire : l'indemnité ne peut dépasser la valeur de la chose assurée ; franchise"
+      },
+      {
+        "id": "Q25",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q26",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L121-18"
+        ],
+        "top1_titre": "Expertise : délai de six mois pour une proposition d'indemnisation ou un refus motivé"
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": 38,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q28",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-9"
+        ],
+        "top1_titre": "Délai de l'assureur pour présenter une offre d'indemnité à la victime"
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-5"
+        ],
+        "top1_titre": "Clause type bonus-malus, article 5"
+      },
+      {
+        "id": "Q30",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "L127-3"
+        ],
+        "top1_titre": "L'assurance de protection juridique"
+      },
+      {
+        "id": "Q31",
+        "rank": null,
+        "full_rank": 372,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 342,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      }
+    ],
+    "n_chunks": 594
+  },
+  "Par article + Dense (multilingual-e5-small)": {
+    "hit@1": 0.59375,
+    "hit@3": 0.75,
+    "hit@5": 0.78125,
+    "MRR@5": 0.6692708333333334,
+    "tokens_top5": 1140.21875,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q03",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "22"
+        ],
+        "top1_titre": "Délai de règlement"
+      },
+      {
+        "id": "Q04",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "D125-5-8"
+        ],
+        "top1_titre": "Les franchises"
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q06",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-6"
+        ],
+        "top1_titre": "Clause de déchéance pour conduite en état d'ivresse ou sous stupéfiants réputée non écrite"
+      },
+      {
+        "id": "Q07",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "15"
+        ],
+        "top1_titre": "Exclusions liées à l'usage du véhicule"
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "7"
+        ],
+        "top1_titre": "Dommages collision"
+      },
+      {
+        "id": "Q09",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18"
+        ],
+        "top1_titre": "Pièces à fournir"
+      },
+      {
+        "id": "Q10",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q11",
+        "rank": null,
+        "full_rank": 6,
+        "top1": [
+          "5"
+        ],
+        "top1_titre": "Défense pénale et recours"
+      },
+      {
+        "id": "Q12",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "25"
+        ],
+        "top1_titre": "Critères d'investigation"
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10"
+        ],
+        "top1_titre": "Incendie et événements climatiques"
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q15",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "12"
+        ],
+        "top1_titre": "Garantie du conducteur"
+      },
+      {
+        "id": "Q16",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 14,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q18",
+        "rank": null,
+        "full_rank": 60,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q19",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q20",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "L211-8"
+        ],
+        "top1_titre": "Champ d'application : victimes d'un accident de la circulation impliquant un véhicule"
+      },
+      {
+        "id": "Q21",
+        "rank": null,
+        "full_rank": 14,
+        "top1": [
+          "L211-7-1"
+        ],
+        "top1_titre": "Nullité du contrat inopposable aux victimes"
+      },
+      {
+        "id": "Q22",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L113-9"
+        ],
+        "top1_titre": "Omission ou déclaration inexacte de bonne foi : réduction proportionnelle de l'indemnité"
+      },
+      {
+        "id": "Q23",
+        "rank": 4,
+        "full_rank": 4,
+        "top1": [
+          "R211-14-0-1"
+        ],
+        "top1_titre": "Le contrôle des véhicules immatriculés soumis à obligation d'assurance"
+      },
+      {
+        "id": "Q24",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L121-1"
+        ],
+        "top1_titre": "Principe indemnitaire : l'indemnité ne peut dépasser la valeur de la chose assurée ; franchise"
+      },
+      {
+        "id": "Q25",
+        "rank": null,
+        "full_rank": 28,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q26",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L121-18"
+        ],
+        "top1_titre": "Expertise : délai de six mois pour une proposition d'indemnisation ou un refus motivé"
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": 37,
+        "top1": [
+          "L211-19"
+        ],
+        "top1_titre": "Aggravation du dommage de la victime"
+      },
+      {
+        "id": "Q28",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-9"
+        ],
+        "top1_titre": "Délai de l'assureur pour présenter une offre d'indemnité à la victime"
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-5"
+        ],
+        "top1_titre": "Clause type bonus-malus, article 5"
+      },
+      {
+        "id": "Q30",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-5-1"
+        ],
+        "top1_titre": "Libre choix du réparateur par l'assuré"
+      },
+      {
+        "id": "Q31",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-13"
+        ],
+        "top1_titre": "Franchises, déchéances, réduction et exclusions inopposables aux victimes"
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 31,
+        "top1": [
+          "5"
+        ],
+        "top1_titre": "Défense pénale et recours"
+      }
+    ],
+    "n_chunks": 594
+  },
+  "Par article + Hybride (RRF)": {
+    "hit@1": 0.59375,
+    "hit@3": 0.78125,
+    "hit@5": 0.78125,
+    "MRR@5": 0.6822916666666666,
+    "tokens_top5": 1340.84375,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q03",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q04",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "21"
+        ],
+        "top1_titre": "Responsabilité partagée et convention IRSA"
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q06",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-6"
+        ],
+        "top1_titre": "Clause de déchéance pour conduite en état d'ivresse ou sous stupéfiants réputée non écrite"
+      },
+      {
+        "id": "Q07",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "15"
+        ],
+        "top1_titre": "Exclusions liées à l'usage du véhicule"
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "7"
+        ],
+        "top1_titre": "Dommages collision"
+      },
+      {
+        "id": "Q09",
+        "rank": null,
+        "full_rank": 9,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q10",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q11",
+        "rank": null,
+        "full_rank": 20,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q12",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "24"
+        ],
+        "top1_titre": "Circuit de traitement d'un dossier"
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10"
+        ],
+        "top1_titre": "Incendie et événements climatiques"
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q15",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "12"
+        ],
+        "top1_titre": "Garantie du conducteur"
+      },
+      {
+        "id": "Q16",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-10"
+        ],
+        "top1_titre": "Exclusions autorisées : conducteur sans permis valide ou n'ayant pas l'âge requis, transport de personnes"
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 20,
+        "top1": [
+          "L451-1"
+        ],
+        "top1_titre": "Organisme d'information"
+      },
+      {
+        "id": "Q18",
+        "rank": null,
+        "full_rank": 8,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": "Dispositions applicables à l'indemnisation des dommages aux biens"
+      },
+      {
+        "id": "Q19",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "2"
+        ],
+        "top1_titre": "Définitions"
+      },
+      {
+        "id": "Q20",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "13"
+        ],
+        "top1_titre": "Assistance"
+      },
+      {
+        "id": "Q21",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "15"
+        ],
+        "top1_titre": "Exclusions liées à l'usage du véhicule"
+      },
+      {
+        "id": "Q22",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L113-9"
+        ],
+        "top1_titre": "Omission ou déclaration inexacte de bonne foi : réduction proportionnelle de l'indemnité"
+      },
+      {
+        "id": "Q23",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "R211-14-0-1"
+        ],
+        "top1_titre": "Le contrôle des véhicules immatriculés soumis à obligation d'assurance"
+      },
+      {
+        "id": "Q24",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L121-1"
+        ],
+        "top1_titre": "Principe indemnitaire : l'indemnité ne peut dépasser la valeur de la chose assurée ; franchise"
+      },
+      {
+        "id": "Q25",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q26",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L121-18"
+        ],
+        "top1_titre": "Expertise : délai de six mois pour une proposition d'indemnisation ou un refus motivé"
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": 31,
+        "top1": [
+          "L211-19"
+        ],
+        "top1_titre": "Aggravation du dommage de la victime"
+      },
+      {
+        "id": "Q28",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-9"
+        ],
+        "top1_titre": "Délai de l'assureur pour présenter une offre d'indemnité à la victime"
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-5"
+        ],
+        "top1_titre": "Clause type bonus-malus, article 5"
+      },
+      {
+        "id": "Q30",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-5-1"
+        ],
+        "top1_titre": "Libre choix du réparateur par l'assuré"
+      },
+      {
+        "id": "Q31",
+        "rank": null,
+        "full_rank": 44,
+        "top1": [
+          "6"
+        ],
+        "top1_titre": "Dommages tous accidents"
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 99,
+        "top1": [
+          "R421-68"
+        ],
+        "top1_titre": "Dispositions particulières applicables aux accidents d'automobile survenus à l'étranger"
+      }
+    ],
+    "n_chunks": 594
+  }
+}

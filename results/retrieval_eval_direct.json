@@ -1,0 +1,896 @@
+{
+  "Par article + BM25": {
+    "hit@1": 0.46875,
+    "hit@3": 0.625,
+    "hit@5": 0.6875,
+    "MRR@5": 0.5609375,
+    "tokens_top5": 1295.59375,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q03",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q04",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "21"
+        ],
+        "top1_titre": "Responsabilité partagée et convention IRSA"
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q06",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-6"
+        ],
+        "top1_titre": "Clause de déchéance pour conduite en état d'ivresse ou sous stupéfiants réputée non écrite"
+      },
+      {
+        "id": "Q07",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "15"
+        ],
+        "top1_titre": "Exclusions liées à l'usage du véhicule"
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "7"
+        ],
+        "top1_titre": "Dommages collision"
+      },
+      {
+        "id": "Q09",
+        "rank": null,
+        "full_rank": 29,
+        "top1": [
+          "23"
+        ],
+        "top1_titre": "Fausse déclaration et fraude"
+      },
+      {
+        "id": "Q10",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q11",
+        "rank": 4,
+        "full_rank": 4,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q12",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "24"
+        ],
+        "top1_titre": "Circuit de traitement d'un dossier"
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10"
+        ],
+        "top1_titre": "Incendie et événements climatiques"
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q15",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q16",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-10"
+        ],
+        "top1_titre": "Exclusions autorisées : conducteur sans permis valide ou n'ayant pas l'âge requis, transport de personnes"
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 63,
+        "top1": [
+          "L421-1"
+        ],
+        "top1_titre": "Dispositions générales"
+      },
+      {
+        "id": "Q18",
+        "rank": 5,
+        "full_rank": 5,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": "Dispositions applicables à l'indemnisation des dommages aux biens"
+      },
+      {
+        "id": "Q19",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "2"
+        ],
+        "top1_titre": "Définitions"
+      },
+      {
+        "id": "Q20",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "13"
+        ],
+        "top1_titre": "Assistance"
+      },
+      {
+        "id": "Q21",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "L211-1-1"
+        ],
+        "top1_titre": "Véhicule irréparable : conditions de résiliation du contrat"
+      },
+      {
+        "id": "Q22",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "23"
+        ],
+        "top1_titre": "Fausse déclaration et fraude"
+      },
+      {
+        "id": "Q23",
+        "rank": null,
+        "full_rank": 8,
+        "top1": [
+          "R211-14-0-1"
+        ],
+        "top1_titre": "Le contrôle des véhicules immatriculés soumis à obligation d'assurance"
+      },
+      {
+        "id": "Q24",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "L211-4"
+        ],
+        "top1_titre": "Étendue territoriale de la garantie et personnes transportées"
+      },
+      {
+        "id": "Q25",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q26",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "D211-1"
+        ],
+        "top1_titre": "Personnes assujetties"
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q28",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-9"
+        ],
+        "top1_titre": "Délai de l'assureur pour présenter une offre d'indemnité à la victime"
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-5"
+        ],
+        "top1_titre": "Clause type bonus-malus, article 5"
+      },
+      {
+        "id": "Q30",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-5-1"
+        ],
+        "top1_titre": "Libre choix du réparateur par l'assuré"
+      },
+      {
+        "id": "Q31",
+        "rank": null,
+        "full_rank": 156,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 201,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      }
+    ],
+    "n_chunks": 339
+  },
+  "Par article + Dense (multilingual-e5-small)": {
+    "hit@1": 0.5625,
+    "hit@3": 0.6875,
+    "hit@5": 0.75,
+    "MRR@5": 0.6354166666666667,
+    "tokens_top5": 1107.0,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q03",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "22"
+        ],
+        "top1_titre": "Délai de règlement"
+      },
+      {
+        "id": "Q04",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "21"
+        ],
+        "top1_titre": "Responsabilité partagée et convention IRSA"
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q06",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-6"
+        ],
+        "top1_titre": "Clause de déchéance pour conduite en état d'ivresse ou sous stupéfiants réputée non écrite"
+      },
+      {
+        "id": "Q07",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "15"
+        ],
+        "top1_titre": "Exclusions liées à l'usage du véhicule"
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "7"
+        ],
+        "top1_titre": "Dommages collision"
+      },
+      {
+        "id": "Q09",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "18"
+        ],
+        "top1_titre": "Pièces à fournir"
+      },
+      {
+        "id": "Q10",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q11",
+        "rank": 4,
+        "full_rank": 4,
+        "top1": [
+          "5"
+        ],
+        "top1_titre": "Défense pénale et recours"
+      },
+      {
+        "id": "Q12",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "25"
+        ],
+        "top1_titre": "Critères d'investigation"
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10"
+        ],
+        "top1_titre": "Incendie et événements climatiques"
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q15",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "12"
+        ],
+        "top1_titre": "Garantie du conducteur"
+      },
+      {
+        "id": "Q16",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 13,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q18",
+        "rank": null,
+        "full_rank": 43,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q19",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q20",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "L211-8"
+        ],
+        "top1_titre": "Champ d'application : victimes d'un accident de la circulation impliquant un véhicule"
+      },
+      {
+        "id": "Q21",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "L211-7-1"
+        ],
+        "top1_titre": "Nullité du contrat inopposable aux victimes"
+      },
+      {
+        "id": "Q22",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": "Dispositions applicables à l'indemnisation des dommages aux biens"
+      },
+      {
+        "id": "Q23",
+        "rank": 4,
+        "full_rank": 4,
+        "top1": [
+          "R211-14-0-1"
+        ],
+        "top1_titre": "Le contrôle des véhicules immatriculés soumis à obligation d'assurance"
+      },
+      {
+        "id": "Q24",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "6"
+        ],
+        "top1_titre": "Dommages tous accidents"
+      },
+      {
+        "id": "Q25",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q26",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "R211-34"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "L211-19"
+        ],
+        "top1_titre": "Aggravation du dommage de la victime"
+      },
+      {
+        "id": "Q28",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-9"
+        ],
+        "top1_titre": "Délai de l'assureur pour présenter une offre d'indemnité à la victime"
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-5"
+        ],
+        "top1_titre": "Clause type bonus-malus, article 5"
+      },
+      {
+        "id": "Q30",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-5-1"
+        ],
+        "top1_titre": "Libre choix du réparateur par l'assuré"
+      },
+      {
+        "id": "Q31",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-13"
+        ],
+        "top1_titre": "Franchises, déchéances, réduction et exclusions inopposables aux victimes"
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 28,
+        "top1": [
+          "5"
+        ],
+        "top1_titre": "Défense pénale et recours"
+      }
+    ],
+    "n_chunks": 339
+  },
+  "Par article + Hybride (RRF)": {
+    "hit@1": 0.5,
+    "hit@3": 0.65625,
+    "hit@5": 0.65625,
+    "MRR@5": 0.5729166666666667,
+    "tokens_top5": 1322.125,
+    "detail": [
+      {
+        "id": "Q01",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q02",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "16"
+        ],
+        "top1_titre": "Conducteur non désigné et prêt du volant"
+      },
+      {
+        "id": "Q03",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q04",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "21"
+        ],
+        "top1_titre": "Responsabilité partagée et convention IRSA"
+      },
+      {
+        "id": "Q05",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "8"
+        ],
+        "top1_titre": "Bris de glace"
+      },
+      {
+        "id": "Q06",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-6"
+        ],
+        "top1_titre": "Clause de déchéance pour conduite en état d'ivresse ou sous stupéfiants réputée non écrite"
+      },
+      {
+        "id": "Q07",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "15"
+        ],
+        "top1_titre": "Exclusions liées à l'usage du véhicule"
+      },
+      {
+        "id": "Q08",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "7"
+        ],
+        "top1_titre": "Dommages collision"
+      },
+      {
+        "id": "Q09",
+        "rank": null,
+        "full_rank": 7,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q10",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "19"
+        ],
+        "top1_titre": "Expertise et évaluation des dommages"
+      },
+      {
+        "id": "Q11",
+        "rank": null,
+        "full_rank": 19,
+        "top1": [
+          "5"
+        ],
+        "top1_titre": "Défense pénale et recours"
+      },
+      {
+        "id": "Q12",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "24"
+        ],
+        "top1_titre": "Circuit de traitement d'un dossier"
+      },
+      {
+        "id": "Q13",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "10"
+        ],
+        "top1_titre": "Incendie et événements climatiques"
+      },
+      {
+        "id": "Q14",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "17"
+        ],
+        "top1_titre": "Délais de déclaration"
+      },
+      {
+        "id": "Q15",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q16",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "R211-10"
+        ],
+        "top1_titre": "Exclusions autorisées : conducteur sans permis valide ou n'ayant pas l'âge requis, transport de personnes"
+      },
+      {
+        "id": "Q17",
+        "rank": null,
+        "full_rank": 23,
+        "top1": [
+          "L451-1"
+        ],
+        "top1_titre": "Organisme d'information"
+      },
+      {
+        "id": "Q18",
+        "rank": null,
+        "full_rank": 6,
+        "top1": [
+          "R421-20"
+        ],
+        "top1_titre": "Dispositions applicables à l'indemnisation des dommages aux biens"
+      },
+      {
+        "id": "Q19",
+        "rank": 2,
+        "full_rank": 2,
+        "top1": [
+          "2"
+        ],
+        "top1_titre": "Définitions"
+      },
+      {
+        "id": "Q20",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "13"
+        ],
+        "top1_titre": "Assistance"
+      },
+      {
+        "id": "Q21",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "15"
+        ],
+        "top1_titre": "Exclusions liées à l'usage du véhicule"
+      },
+      {
+        "id": "Q22",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "23"
+        ],
+        "top1_titre": "Fausse déclaration et fraude"
+      },
+      {
+        "id": "Q23",
+        "rank": 3,
+        "full_rank": 3,
+        "top1": [
+          "R211-14-0-1"
+        ],
+        "top1_titre": "Le contrôle des véhicules immatriculés soumis à obligation d'assurance"
+      },
+      {
+        "id": "Q24",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "6"
+        ],
+        "top1_titre": "Dommages tous accidents"
+      },
+      {
+        "id": "Q25",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "L211-12"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q26",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      },
+      {
+        "id": "Q27",
+        "rank": null,
+        "full_rank": null,
+        "top1": [
+          "L211-19"
+        ],
+        "top1_titre": "Aggravation du dommage de la victime"
+      },
+      {
+        "id": "Q28",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-9"
+        ],
+        "top1_titre": "Délai de l'assureur pour présenter une offre d'indemnité à la victime"
+      },
+      {
+        "id": "Q29",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "A121-1-annexe-5"
+        ],
+        "top1_titre": "Clause type bonus-malus, article 5"
+      },
+      {
+        "id": "Q30",
+        "rank": 1,
+        "full_rank": 1,
+        "top1": [
+          "L211-5-1"
+        ],
+        "top1_titre": "Libre choix du réparateur par l'assuré"
+      },
+      {
+        "id": "Q31",
+        "rank": null,
+        "full_rank": 26,
+        "top1": [
+          "6"
+        ],
+        "top1_titre": "Dommages tous accidents"
+      },
+      {
+        "id": "Q32",
+        "rank": null,
+        "full_rank": 82,
+        "top1": [
+          "A211-11-annexe"
+        ],
+        "top1_titre": "Procédures d'indemnisation"
+      }
+    ],
+    "n_chunks": 339
+  }
+}
