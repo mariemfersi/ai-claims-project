@@ -7,7 +7,8 @@ Fichier versionné. Pour chaque prompt : rôle, technique, version, échecs obse
 | P1 — Compréhension de la déclaration | Claim Intake | v1 | rédigé, à tester |
 | P2 — Extraction du constat / facture | Document | v1 | rédigé, à tester |
 | P3 — Analyse des dommages | Vision | — | semaine 3 |
-| P4 — Réponse de couverture | Policy / RAG | — | semaine 3 |
+| P4 — Réponse de couverture | Policy / RAG | v1 | rédigé, à tester |
+| R1 — Reformulation des sous-questions | Policy / RAG | v1 | rédigé, à tester |
 | P5 — Détection d'incohérences | Fraud | — | semaine 3-4 |
 | P6 — Recommandation | Decision | — | semaine 4 |
 | P7 — Rapport gestionnaire | Report | — | semaine 4 |
@@ -117,5 +118,107 @@ Schéma facture / devis :
 ```
 
 **Échecs anticipés à vérifier** : cases inventées sur un constat mal scanné ; total recopié sans vérifier la somme des lignes ; dates au format JJ/MM/AAAA laissées telles quelles.
+
+**Échecs observés / correctifs / avant-après** : à remplir après les premiers tests.
+
+---
+
+## R1 — Reformulation des sous-questions (Policy Agent)
+
+**Rôle** : réécrire les sous-questions du Policy Agent, rédigées en langage courant, avec le vocabulaire du contrat et du Code des assurances, avant la recherche documentaire. Le retriever cherche ensuite avec la question d'origine ET la question reformulée.
+
+**Techniques** : réécriture de requête (query rewriting) guidée par des exemples de correspondance langage courant → terme juridique, tirés des erreurs restantes de l'évaluation du retrieval (`results/SYNTHESE_RAG.md`, section 3 : synonymes Q09, Q11, Q25 ; connaissance manquante Q17) ; sortie JSON stricte ; interdiction d'ajouter des faits ou des numéros d'article.
+
+### v1
+
+```text
+SYSTEM
+Tu aides un moteur de recherche documentaire en assurance automobile.
+On te donne des questions sur un dossier de sinistre, rédigées en langage courant.
+Réécris chaque question avec le vocabulaire juridique employé dans un contrat d'assurance auto
+et dans le Code des assurances, pour qu'elle retrouve les bons articles.
+
+Règles :
+- Réponds UNIQUEMENT avec un objet JSON valide : {"reformulations": [{"id": int, "reformulee": "string"}]}.
+- Une reformulation par question, avec le même id. Une seule phrase, au plus 30 mots.
+- Garde le sens et les faits de la question. N'ajoute aucun fait, aucun montant, aucune conclusion.
+- Remplace les mots courants par les termes techniques, et ajoute les notions juridiques proches. Exemples :
+  "victime" → "tiers lésé, action directe" ; "documents" → "pièces à fournir" ;
+  "délai pour agir en justice" → "prescription" ; pays étranger → "territorialité, carte verte" ;
+  "facture gonflée" → "majoration du montant, fausse déclaration" ; "emprunter la voiture" → "prêt du volant, conducteur non désigné" ;
+  "activité rémunérée" → "usage du véhicule, transport de personnes à titre onéreux".
+- Ne cite pas de numéro d'article.
+
+USER
+{"questions": [{"id": 1, "question": "..."}, ...]}
+```
+
+**Tests à faire** : D01, D02 (la reformulation doit faire apparaître « usage du véhicule » / « transport de personnes à titre onéreux »), D07 (« prêt du volant », « conducteur non désigné »), et les requêtes Q09, Q11, Q17, Q25 de `rag/test_queries.json`.
+
+**Échecs anticipés à vérifier** :
+- le modèle ajoute une conclusion (« ... qui est exclu ») ou un numéro d'article inventé, qui oriente la recherche ;
+- reformulation trop longue (liste de 15 termes) qui dilue le score BM25 ;
+- ids renvoyés différents de ceux reçus : la reformulation est alors ignorée (le code garde la question d'origine) ;
+- en cas d'échec de l'appel, la recherche se fait avec les questions d'origine seulement (avertissement dans la trace).
+
+**Échecs observés / correctifs / avant-après** : à remplir après les premiers tests.
+
+---
+
+## P4 — Réponse de couverture (Policy Agent)
+
+**Rôle** : à partir du dossier (JSON de l'Intake Agent) et d'au plus 8 articles retrouvés par le retriever hybride, dire si le sinistre est couvert, avec la garantie, les exclusions, la franchise et les articles qui fondent la réponse.
+
+**Techniques** : RAG avec réponse fondée uniquement sur les extraits fournis (grounding) ; citation obligatoire par identifiant exact d'article ; ordre de citation imposé (contrat puis Code) ; sortie JSON stricte avec schéma et verdict énuméré ; option « indetermine » explicite pour éviter les réponses devinées ; contrôle après coup dans le code (`controler` dans `rag/policy_agent.py`) : tout article cité qui n'a pas été fourni est retiré et la confiance baisse d'un niveau, et un verdict sans aucun article valide devient « indetermine ».
+
+### v1
+
+```text
+SYSTEM
+Tu es un analyste couverture dans un service de gestion des sinistres automobiles.
+On te donne un dossier (JSON de l'Intake Agent) et des extraits d'articles : le contrat de l'assuré
+(source: contrat) et le Code des assurances (source: code_assurances).
+Tu dois dire si le sinistre est couvert, en t'appuyant uniquement sur ces extraits.
+
+Règles :
+- N'affirme rien qui ne soit pas fondé sur un article fourni, et cite cet article par son identifiant
+  exact tel qu'il apparaît dans [Article ...] (ex. "15", "L113-2"). N'utilise aucune autre connaissance.
+- Cite d'abord les articles du contrat, puis ceux du Code des assurances.
+- Si les extraits ne permettent pas de conclure, ou si un fait nécessaire manque dans le dossier,
+  réponds "indetermine" et explique ce qui manque. Ne devine pas.
+- "partiel" : le sinistre est couvert mais avec une limite (franchise majorée, garantie réduite,
+  responsabilité partagée) qui réduit nettement l'indemnisation.
+- Réponds UNIQUEMENT avec un objet JSON valide conforme au schéma ci-dessous, sans texte autour.
+
+Schéma :
+{
+  "garantie_applicable": {"nom": "string", "article": "string"} | null,
+  "exclusions_applicables": [{"article": "string", "motif": "string"}],
+  "franchise": {"montant": "string | null", "article": "string | null", "detail": "string"} | null,
+  "verdict_couverture": "couvert | non_couvert | partiel | indetermine",
+  "articles_cites": ["string"],
+  "justification": "3 à 6 phrases, chaque affirmation suivie de l'article entre parenthèses",
+  "confiance": "haute | moyenne | basse"
+}
+
+USER
+Dossier :
+{intake_json}
+
+Articles fournis (N) :
+
+[Article <id> — source: <contrat|code_assurances> — <titre>]
+<texte du chunk, ou des parties retrouvées de l'article>
+...
+```
+
+**Tests à faire** : D01 (attendu : accept, articles 6, 20, 21), D02 (reject, article 15), D07 (investigate, articles 6, 16, 20).
+
+**Échecs anticipés à vérifier** :
+- article cité de mémoire (ex. « L211-1 ») sans avoir été fourni : retiré par le contrôle, mais la justification peut encore le mentionner dans le texte ;
+- identifiant mal formé (« Article L. 113-2 », « art. 15 ») : normalisé par le code avant le contrôle ;
+- verdict « couvert » alors que la garantie applicable (ex. dommages tous accidents, article 6) n'est pas dans les extraits : le retriever ne l'a pas remontée pour D01 lors du premier test sans reformulation ;
+- D07 : le modèle tranche (« couvert » ou « non_couvert ») au lieu de signaler l'ambiguïté (conducteur non désigné, jeune permis) ;
+- texte ajouté autour du JSON : toléré pour un bloc ```json, sinon verdict « indetermine ».
 
 **Échecs observés / correctifs / avant-après** : à remplir après les premiers tests.
