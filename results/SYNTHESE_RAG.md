@@ -13,13 +13,17 @@ Métriques utilisées :
 
 Avec 32 requêtes, **une requête vaut environ 0,03** sur hit@k (voir section 5).
 
-Sources des chiffres :
-- `results/retrieval_eval_*.md` et `.json` ;
-- `results/erreurs_retrieval_*.md` ;
-- le commentaire en tête de `rag/eval_retrieval.py` ;
-- `git log`.
+Sources des chiffres (chaque tableau indique la sienne) :
 
-Les seuls chiffres qui ne figurent pas dans ces fichiers sont ceux de la mesure de troncature (section 2.e). Elle a été faite ponctuellement et son script n'est pas versionné.
+| Script | Produit |
+|---|---|
+| `rag/eval_retrieval.py` | métriques, nombre de chunks et temps d'embeddings du corpus, dans `results/retrieval_eval_*.md` et `.json` ; analyse d'erreurs, dans `results/erreurs_retrieval_*.md` |
+| `rag/check_token_lengths.py --model <modèle>` | chunks au-dessus de la limite du modèle dense, et les plus longs (section 2.e) |
+| `rag/measure_query_time.py --model <modèle>` | temps d'encodage d'une requête (section 2.f) |
+| `git log` | historique des commits |
+
+Quelques chiffres sont recalculés à partir des JSON produits par `eval_retrieval.py` : les scores sur 27 requêtes
+(section 2.c) et les changements de rang (section 2.d). Les décomptes d'articles (section 1) viennent directement des fichiers du corpus.
 
 ---
 
@@ -28,10 +32,13 @@ Les seuls chiffres qui ne figurent pas dans ces fichiers sont ceux de la mesure 
 | Document | Fichier | Articles | Source |
 |---|---|---|---|
 | Contrat (conditions générales auto, fictif) | `data/corpus/conditions_generales_auto.md` | 26 (articles 1 à 26) | `contrat` |
-| Code des assurances, extraits liés à l'auto | `data/corpus/code_assurances_extraits.md` | 428, dont 244 `lien_auto: direct` et 184 `lien_auto: indirect` | `code_assurances` |
+| Code des assurances, extraits liés à l'auto | `data/corpus/code_assurances_extraits.md` | 415 articles retenus, en 428 entrées : 244 `lien_auto: direct` et 184 `lien_auto: indirect` | `code_assurances` |
 
-> **Écart à corriger** : le message du commit 7ac528c annonce 415 articles, mais le fichier en contient
-> 428, dont 17 annexes, sans doublon d'identifiant. Les chiffres de cette synthèse sont ceux du fichier.
+> **415 articles, 428 entrées** : 415 articles du Code des assurances ont été retenus. Le fichier contient 428 entrées
+> `## Article` parce que l'annexe à l'article A121-1 (clause type bonus-malus) est découpée en 14 entrées, une par
+> article de la clause (A121-1-annexe-1 à A121-1-annexe-14) : 415 − 1 + 14 = 428.
+> Le fichier compte 17 annexes : les 14 parties du bonus-malus, plus A211-11-annexe, A112-annexe et A112-1-annexe.
+> Les décomptes `direct` et `indirect` portent sur les 428 entrées.
 
 **Règle de sélection** des articles du Code (en-tête du fichier ; texte Légifrance, dernière modification le 20 août 2026) :
 - **`lien_auto: direct`** :
@@ -51,7 +58,7 @@ Les seuls chiffres qui ne figurent pas dans ces fichiers sont ceux de la mesure 
   - dans les chapitres retenus, les sections sans lien avec l'auto (chasse, relogement, dommages miniers,
     construction, commissions administratives).
 
-**Nombre de chunks** (les deux fichiers sont découpés séparément) :
+**Nombre de chunks** (les deux fichiers sont découpés séparément ; source : `eval_retrieval.py`, colonne « Chunks ») :
 
 | Chunking | Chunks | Détail |
 |---|---|---|
@@ -185,7 +192,7 @@ Sources : `retrieval_eval_tout_multilingual-e5-small.md` et `retrieval_eval_tout
 
 **Testé** : `multilingual-e5-small` ne lit que 512 tokens. On a compté, avec son propre tokenizer
 (préfixe `passage: ` et tokens spéciaux compris), les chunks qui dépassent cette limite.
-C'est une mesure ponctuelle du 20/10/2026, dont le script n'est pas versionné.
+Source : `python rag/check_token_lengths.py --model intfloat/multilingual-e5-small`.
 
 | Chunking | Chunks | Chunks > 512 tokens e5 | Plus long |
 |---|---|---|---|
@@ -203,18 +210,27 @@ et son embedding n'en représente bien aucun. C'est une interprétation : l'exp�
 
 **Testé** : le dense `BAAI/bge-m3` (sans préfixe, fenêtre de 8192 tokens) contre `intfloat/multilingual-e5-small`,
 avec `--filtre tout --bm25-stem`, sur CPU.
-Sources : `retrieval_eval_tout_stem_multilingual-e5-small.md`, `retrieval_eval_tout_stem_bge-m3.md` et
-l'en-tête de `eval_retrieval.py` pour le temps par requête.
+Sources :
+- métriques et temps d'embeddings du corpus : `eval_retrieval.py --bm25-stem`, fichiers `retrieval_eval_tout_stem_multilingual-e5-small.md`
+  et `retrieval_eval_tout_stem_bge-m3.md` ;
+- encodage d'une requête : `rag/measure_query_time.py --model <modèle>`.
 
 | Retriever (par article) | Modèle | hit@1 | hit@3 | hit@5 | MRR@5 | Tokens top-5 | Embeddings du corpus | Encodage d'une requête |
 |---|---|---|---|---|---|---|---|---|
 | Dense | e5-small | 0.59 | 0.75 | 0.78 | 0.67 | 1140 | 25 s | ~9 ms |
-| Dense | bge-m3 | 0.62 | 0.81 | 0.84 | 0.71 | 1353 | 298 s | ~65 ms |
+| Dense | bge-m3 | 0.62 | 0.81 | 0.84 | 0.71 | 1353 | 298 s | ~60-65 ms |
 | Hybride | e5-small | 0.62 | 0.78 | 0.81 | 0.71 | 1286 | 25 s | ~9 ms |
-| Hybride | bge-m3 | **0.69** | **0.88** | **0.91** | **0.79** | 1297 | 298 s | ~65 ms |
+| Hybride | bge-m3 | **0.69** | **0.88** | **0.91** | **0.79** | 1297 | 298 s | ~60-65 ms |
 
 Le temps d'encodage d'une requête est une moyenne sur les 32 requêtes, encodées une par une après un appel
-d'échauffement. Les embeddings du corpus ne sont calculés qu'une fois et peuvent être mis en cache.
+d'échauffement. Il varie d'un lancement à l'autre ; deux mesures ont été faites :
+
+| Modèle | Mesure 1 (moyenne / médiane / max) | Mesure 2 (moyenne / médiane / max) |
+|---|---|---|
+| e5-small | 8.8 / 8.5 / 15.0 ms | 9.4 / 9.5 / 11.4 ms |
+| bge-m3 | 64.7 / 64.2 / 82.0 ms | 58.6 / 57.1 / 74.5 ms |
+
+Les embeddings du corpus ne sont calculés qu'une fois et peuvent être mis en cache.
 Avec bge-m3, l'hybride gagne 2 requêtes en hit@1 et 3 en hit@5. Le pire rang passe de 34 à 50 (Q11).
 
 En taille fixe, l'hybride bge-m3 obtient hit@5 = 0.88 mais seulement hit@1 = 0.44, et coûte toujours 2491 tokens.
@@ -267,7 +283,7 @@ Commande : `python rag/eval_retrieval.py --bm25-stem`. bge-m3 est le modèle par
 **Pourquoi** :
 - C'est la meilleure configuration mesurée sur toutes les métriques de qualité.
 - Elle envoie environ deux fois moins de tokens au LLM que la taille fixe.
-- Son coût reste raisonnable sur CPU : environ 5 min d'indexation, une seule fois, et environ 65 ms par requête,
+- Son coût reste raisonnable sur CPU : environ 5 min d'indexation, une seule fois, et environ 60 à 65 ms par requête,
   négligeables à côté de l'appel au LLM.
 - BM25 et le dense se complètent : dans le tableau croisé, chacun rate seul 5 requêtes que l'autre réussit,
   et l'hybride n'introduit aucune erreur qui lui soit propre.
