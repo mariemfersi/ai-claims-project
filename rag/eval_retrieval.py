@@ -6,6 +6,13 @@ Usage :
 
 Métriques : hit@1, hit@3, hit@5, MRR@5, et nombre moyen de tokens envoyés au LLM
 pour le top-5 (coût / bruit du contexte).
+
+Configuration retenue : « Par article + Hybride (RRF) + --bm25-stem »
+(MRR@5 0.71, hit@5 0.81 sur 32 requêtes). Le comportement par défaut reste
+sans racinisation ; passer --bm25-stem pour reproduire cette configuration.
+Le filtre --filtre direct a été évalué et non retenu (5 requêtes sur 32 deviennent
+introuvables). Note d'historique : le commit 3d8a55c contient aussi l'hybride RRF
+et l'analyse d'erreurs détaillée, en plus du filtre et de la racinisation.
 """
 import argparse, json, re
 from pathlib import Path
