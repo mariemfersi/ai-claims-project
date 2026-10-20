@@ -1,15 +1,17 @@
-"""Évaluation du retrieval : 2 stratégies de chunking x 2 retrievers (BM25, dense).
+"""Évaluation du retrieval : 2 stratégies de chunking x 3 retrievers (BM25, dense, hybride RRF).
 
 Usage :
-    python rag/eval_retrieval.py                      # e5-small (rapide, CPU)
-    python rag/eval_retrieval.py --model BAAI/bge-m3  # modèle cible du projet (plus lourd)
+    python rag/eval_retrieval.py --bm25-stem                                         # bge-m3 (modèle retenu)
+    python rag/eval_retrieval.py --bm25-stem --model intfloat/multilingual-e5-small  # e5-small (rapide, CPU)
 
-Métriques : hit@1, hit@3, hit@5, MRR@5, et nombre moyen de tokens envoyés au LLM
-pour le top-5 (coût / bruit du contexte).
+Métriques : hit@1, hit@3, hit@5, MRR@5, nombre moyen de tokens envoyés au LLM
+pour le top-5 (coût / bruit du contexte) et temps d'encodage du corpus.
 
-Configuration retenue : « Par article + Hybride (RRF) + --bm25-stem »
-(MRR@5 0.71, hit@5 0.81 sur 32 requêtes). Le comportement par défaut reste
-sans racinisation ; passer --bm25-stem pour reproduire cette configuration.
+Configuration retenue : « Par article + Hybride (RRF) + --bm25-stem + bge-m3 »
+(MRR@5 0.79, hit@5 0.91 sur 32 requêtes ; avec e5-small : MRR@5 0.71, hit@5 0.81).
+Coût sur CPU : embeddings du corpus ~5 min (contre ~25 s pour e5-small), calculés
+une seule fois ; encodage d'une requête ~65 ms (contre ~9 ms pour e5-small).
+La racinisation n'est pas active par défaut : passer --bm25-stem.
 Le filtre --filtre direct a été évalué et non retenu (5 requêtes sur 32 deviennent
 introuvables). Note d'historique : le commit 3d8a55c contient aussi l'hybride RRF
 et l'analyse d'erreurs détaillée, en plus du filtre et de la racinisation.
@@ -22,7 +24,7 @@ from chunking import fixed_chunks, structure_chunks, chunk_corpus, load_corpus, 
 
 ROOT = Path(__file__).resolve().parent.parent
 K = 5
-DEFAULT_MODEL = "intfloat/multilingual-e5-small"
+DEFAULT_MODEL = "BAAI/bge-m3"
 
 
 def tokenize(s):
@@ -150,7 +152,7 @@ def main():
     args = ap.parse_args()
     # suffixe des fichiers de résultats, pour que les variantes ne s'écrasent pas
     suffix = args.filtre + ("_stem" if args.bm25_stem else "")
-    if args.model != DEFAULT_MODEL and not args.no_dense:
+    if not args.no_dense:
         suffix += "_" + args.model.split("/")[-1]
 
     corpus = load_corpus(args.corpus)
