@@ -29,3 +29,6 @@ env/
 Thumbs.db
 .vscode/
 .idea/
+
+# Index Qdrant local (rag/index_qdrant.py)
+qdrant_db/
