@@ -307,4 +307,16 @@ foi, L113-9, réduction de l'indemnité), D07 (investigate).
 - D07 : le conducteur (Youssef Ben Salah) n'est pas dans les conducteurs désignés ; le modèle doit appliquer
   l'article 16 (franchise majorée) plutôt que conclure à une exclusion.
 
-**Échecs observés / correctifs / avant-après** : à remplir après le test de la v2.
+**Échecs observés (v2)** :
+- Avec la fusion v2 (somme des scores RRF), l'article 15 n'était pas fourni pour D02 (évincé par des articles
+  remontés par plusieurs questions génériques) : verdict « indetermine ». Corrigé dans le code en v2.1 (2 meilleurs
+  articles de chaque recherche gardés d'office, 10 articles), sans changer le prompt.
+- **v2 + code v2.1, D01** : « couvert », articles 6 et 20 cités, franchise 0 € (tiers responsable identifié,
+  article 20) : conforme à l'attendu (accept).
+- **v2 + code v2.1, D02** : « non_couvert », exclusion de l'article 15 (usage VTC contre usage déclaré « privé et
+  trajet travail ») : conforme à l'attendu (reject). L113-8 et L113-9 étaient fournis, mais la justification n'en
+  parle pas : le modèle s'arrête à l'exclusion contractuelle et ne distingue pas la fausse déclaration
+  intentionnelle (L113-8, nullité) de la déclaration inexacte de bonne foi (L113-9, réduction de l'indemnité).
+  À traiter dans une v3 si cette distinction doit figurer dans la réponse (consigne explicite, ou champ dédié).
+- **D07** : non testé en v2.1, quota journalier de l'offre gratuite atteint (20 requêtes par jour pour
+  `gemini-3.8-flash`). Résultat v2 (fusion v2) : « partiel », articles 6, 16, 20, franchise 300 + 1 000 €.

@@ -1,4 +1,4 @@
-"""Policy Agent v2 : analyse de couverture d'un dossier à partir du JSON de l'Intake Agent.
+"""Policy Agent v2.1 : analyse de couverture d'un dossier à partir du JSON de l'Intake Agent.
 
 Usage :
     python rag/policy_agent.py D01 D02 D07     # test sur des dossiers synthétiques
@@ -7,14 +7,15 @@ Usage :
     resultat = analyse_couverture(intake)
 
 Étapes :
-1. 3 à 5 sous-questions déterministes à partir du dossier et des conditions particulières
-   (garantie souscrite, exclusions, franchise ou responsabilité, délai de déclaration,
-   conducteur s'il n'est pas désigné au contrat).
+1. 3 à 6 sous-questions déterministes à partir du dossier et des conditions particulières
+   (garantie souscrite, exclusions, franchise, responsabilité si un tiers est impliqué,
+   délai de déclaration, conducteur s'il n'est pas désigné au contrat, déclaration du
+   risque si l'usage diffère de l'usage déclaré ou si le conducteur n'est pas désigné).
 2. Reformulation par Gemini dans le vocabulaire du contrat et du Code (prompt R1,
    prompts/PROMPTS.md). En cas d'échec, on garde les questions d'origine.
 3. retriever.search(k=5) sur chaque question (origine + reformulée) ; fusion par
-   article (somme des scores RRF), au plus 8 articles dont au moins 4 du contrat quand
-   il y en a parmi les résultats.
+   article, au plus 10 articles : les 2 meilleurs de chaque recherche d'office, au moins 4
+   du contrat quand il y en a parmi les résultats, puis la somme des scores RRF.
 4. Réponse de couverture par Gemini (prompt P4 v2), en JSON uniquement. Le prompt reçoit
    le dossier, les conditions particulières et les articles dans trois sections distinctes ;
    au-delà de ~6 000 tokens, chaque article est réduit à son chunk le mieux classé.
@@ -44,7 +45,9 @@ MAX_ATTEMPTS = 3          # 1 appel + 2 nouveaux essais
 TIMEOUT_S = 120
 RETRYABLE_HTTP = {429, 500, 502, 503, 504}
 K_PAR_QUESTION = 5
-MAX_ARTICLES = 8
+MAX_ARTICLES = 10
+MAX_QUESTIONS = 6
+PAR_RECHERCHE = 2         # meilleurs articles gardés d'office pour chaque recherche
 MIN_ARTICLES_CONTRAT = 4
 MAX_PROMPT_TOKENS = 6000  # estimation cl100k ; au-delà, un seul chunk par article
 VERDICTS = {"couvert", "non_couvert", "partiel", "indetermine"}
@@ -158,10 +161,14 @@ def call_gemini(system, user, etape="", journal=None):
             return content
         except urllib.error.HTTPError as e:
             last = f"HTTP {e.code}"
-            log(last)
+            detail = e.read()[:2000].decode(errors="replace")
+            quota = re.search(r"Quota exceeded for metric: [^\n\\\\]*", detail)
+            log(f"{last} : {quota.group(0)}" if quota else last)  # 429 : le message dit quel quota
             if e.code not in RETRYABLE_HTTP:  # 400, 401, 403 : inutile de réessayer
-                raise GeminiError(f"{last} : {e.read()[:300].decode(errors='replace')}")
-            wait = float(e.headers.get("Retry-After") or 2 ** attempt)
+                raise GeminiError(f"{last} : {detail}")
+            wait = float(e.headers.get("Retry-After") or retry_delay(detail) or 2 ** attempt)
+            if wait > 60:  # quota journalier épuisé (« retry in 9h38m… ») : réessayer ne sert à rien
+                raise GeminiError(f"{last} : quota épuisé, nouvel essai possible dans {wait / 3600:.1f} h")
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
             last, wait = f"réseau : {e}", 2 ** attempt
             log(last)
@@ -171,6 +178,15 @@ def call_gemini(system, user, etape="", journal=None):
         if attempt < MAX_ATTEMPTS:
             time.sleep(min(wait, 30))
     raise GeminiError(f"échec après {MAX_ATTEMPTS} essais ({last})")
+
+
+def retry_delay(message):
+    """Délai demandé par l'API dans le message d'erreur (« Please retry in 9h38m29.2s »), en secondes."""
+    m = re.search(r"retry in ((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)", message)
+    if not m or not m.group(1):
+        return None
+    parts = {unite: float(valeur) for valeur, unite in re.findall(r"([\d.]+)([hms])", m.group(1))}
+    return parts.get("h", 0) * 3600 + parts.get("m", 0) * 60 + parts.get("s", 0)
 
 
 def parse_json(text):
@@ -184,11 +200,13 @@ def parse_json(text):
 
 
 def sous_questions(intake):
-    """3 à 5 questions en langage courant, construites à partir des champs de l'intake.
+    """3 à 6 questions en langage courant, construites à partir des champs de l'intake.
 
     Avec conditions_particulieres.garanties, la question « garantie » nomme la garantie souscrite qui
-    correspond au type de sinistre. Avec un tiers impliqué, la question « responsabilité »
-    (partage, constat, effet sur la franchise) remplace la question « franchise »."""
+    correspond au type de sinistre. Avec un tiers impliqué, la question « responsabilité » s'ajoute
+    à la question « franchise ». La question « déclaration du risque » est posée quand l'usage au
+    moment du sinistre diffère de l'usage déclaré, ou quand le conducteur n'est pas désigné.
+    Au-delà de MAX_QUESTIONS, la question « délai de déclaration » est retirée en premier."""
     type_sinistre = intake.get("type_sinistre")
     t = TYPES.get(type_sinistre, "sinistre")
     circ = (intake.get("circonstances") or "").strip()
@@ -213,12 +231,14 @@ def sous_questions(intake):
            + (f" Usage du véhicule : {intake['usage_au_moment_du_sinistre']}."
               if intake.get("usage_au_moment_du_sinistre") else "")
            + (f" Usage déclaré au contrat : {cp['usage_declare']}." if cp.get("usage_declare") else ""))]
+    qs.append(("franchise", f"Quelle franchise s'applique à un sinistre de type {t}{avec_tiers} ?"))
     if tiers:
         qs.append(("responsabilite", "Comment la responsabilité est-elle partagée entre les conducteurs d'après le "
                                      "constat amiable, et quelle franchise s'applique selon ce partage ?"))
-    else:
-        qs.append(("franchise", f"Quelle franchise s'applique à un sinistre de type {t}{avec_tiers} ?"))
     qs.append(("delai_declaration", f"Quel est le délai pour déclarer un sinistre de type {t} ?"))
+    usage = (intake.get("usage_au_moment_du_sinistre") or "").strip().lower()
+    declare = (cp.get("usage_declare") or "").strip().lower()
+    usage_different = bool(usage and declare and usage not in declare)
     conducteur = (intake.get("conducteur") or "").strip().lower()
     designes = cp.get("conducteurs_designes")
     if designes is not None:
@@ -230,6 +250,11 @@ def sous_questions(intake):
     if autre:
         qs.append(("conducteur", f"Le véhicule était conduit par {qui} : que prévoit le contrat pour ce "
                                  "conducteur (désignation, prêt du volant, ancienneté du permis) ?"))
+    if usage_different or (autre and designes is not None):
+        qs.append(("declaration_risque", "Quelles sont les conséquences d'une déclaration inexacte ou d'une omission "
+                                         "dans la déclaration du risque, selon que l'assuré est de bonne foi ou non ?"))
+    if len(qs) > MAX_QUESTIONS:
+        qs = [q for q in qs if q[0] != "delai_declaration"][:MAX_QUESTIONS]
     return [{"id": i, "theme": th, "originale": q} for i, (th, q) in enumerate(qs, 1)]
 
 
@@ -251,13 +276,22 @@ def reformuler(questions, avertissements, journal):
 
 
 def retrouver_articles(questions):
-    """Recherche pour chaque question (origine + reformulée), fusion par article.
-    Au plus MAX_ARTICLES, dont au moins MIN_ARTICLES_CONTRAT du contrat s'il y en a."""
+    """Recherche pour chaque question (origine + reformulée), fusion par article, au plus MAX_ARTICLES :
+    1. d'office, les PAR_RECHERCHE meilleurs articles de chaque recherche, par tours (le 1er de chaque
+       recherche, puis le 2e), tant qu'il reste de la place : un article qu'une seule question
+       trouve n'est plus évincé par ceux que plusieurs questions génériques remontent ;
+    2. au moins MIN_ARTICLES_CONTRAT articles du contrat s'il y en a parmi les résultats, en
+       remplaçant au besoin le moins bien classé des autres articles ;
+    3. complément par somme des scores RRF."""
     from retriever import search
-    articles = {}
+    articles, par_recherche = {}, []
     for q in questions:
         for texte in filter(None, (q["originale"], q.get("reformulee"))):
+            ordre = []
+            par_recherche.append(ordre)
             for hit in search(texte, k=K_PAR_QUESTION):
+                if hit["metadata"]["article"] not in ordre:
+                    ordre.append(hit["metadata"]["article"])
                 m = hit["metadata"]
                 a = articles.setdefault(m["article"], {"article": m["article"], "titre": m["titre"],
                                                        "source": m["source"], "score": 0.0,
@@ -267,10 +301,30 @@ def retrouver_articles(questions):
                 partie = m.get("partie", 1)
                 rrf = max(hit["scores"]["rrf"], a["parties"].get(partie, ("", 0))[1])
                 a["parties"][partie] = (hit["text"], rrf)
+    choisis = []  # identifiants d'articles, dans l'ordre d'ajout
+    for tour in range(PAR_RECHERCHE):
+        for ordre in par_recherche:
+            if tour < len(ordre) and ordre[tour] not in choisis and len(choisis) < MAX_ARTICLES:
+                choisis.append(ordre[tour])
+                articles[ordre[tour]]["selection"] = f"d'office (rang {tour + 1} d'une recherche)"
     ranked = sorted(articles.values(), key=lambda a: -a["score"])
-    contrat = [a for a in ranked if a["source"] == "contrat"][:MIN_ARTICLES_CONTRAT]
-    reste = [a for a in ranked if a not in contrat][:MAX_ARTICLES - len(contrat)]
-    best = sorted(contrat + reste, key=lambda a: -a["score"])
+    for a in [a for a in ranked if a["source"] == "contrat" and a["article"] not in choisis]:
+        if sum(articles[x]["source"] == "contrat" for x in choisis) >= MIN_ARTICLES_CONTRAT:
+            break
+        if len(choisis) >= MAX_ARTICLES:
+            autres = [x for x in choisis if articles[x]["source"] != "contrat"]
+            if not autres:
+                break
+            choisis.remove(min(autres, key=lambda x: articles[x]["score"]))
+        choisis.append(a["article"])
+        a["selection"] = "place réservée au contrat"
+    for a in ranked:
+        if len(choisis) >= MAX_ARTICLES:
+            break
+        if a["article"] not in choisis:
+            choisis.append(a["article"])
+            a["selection"] = "somme des scores RRF"
+    best = sorted((articles[x] for x in choisis), key=lambda a: -a["score"])
     for a in best:
         a["questions"] = sorted(a["questions"])
         a["texte"] = "\n".join(a["parties"][p][0] for p in sorted(a["parties"]))
