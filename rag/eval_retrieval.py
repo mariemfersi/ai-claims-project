@@ -14,7 +14,7 @@ Le filtre --filtre direct a été évalué et non retenu (5 requêtes sur 32 dev
 introuvables). Note d'historique : le commit 3d8a55c contient aussi l'hybride RRF
 et l'analyse d'erreurs détaillée, en plus du filtre et de la racinisation.
 """
-import argparse, json, re
+import argparse, json, re, time
 from pathlib import Path
 import numpy as np
 from rank_bm25 import BM25Okapi
@@ -22,6 +22,7 @@ from chunking import fixed_chunks, structure_chunks, chunk_corpus, load_corpus, 
 
 ROOT = Path(__file__).resolve().parent.parent
 K = 5
+DEFAULT_MODEL = "intfloat/multilingual-e5-small"
 
 
 def tokenize(s):
@@ -55,7 +56,9 @@ class Dense:
         self.m = SentenceTransformer(model)
         self.e5 = "e5" in model
         p = [("passage: " if self.e5 else "") + c["text"] for c in chunks]
+        t0 = time.perf_counter()
         self.emb = self.m.encode(p, normalize_embeddings=True)
+        self.embed_s = time.perf_counter() - t0  # temps d'encodage du corpus seulement
     def rank(self, q):
         qe = self.m.encode([("query: " if self.e5 else "") + q], normalize_embeddings=True)[0]
         return list(np.argsort(-(self.emb @ qe)))
@@ -66,6 +69,7 @@ class Hybrid:
     name = "Hybride (RRF)"
     def __init__(self, a, b, k=60):
         self.a, self.b, self.k = a, b, k
+        self.embed_s = getattr(b, "embed_s", None)
     def rank(self, q):
         scores = {}
         for r in (self.a, self.b):
@@ -134,7 +138,7 @@ def error_report(results, by_strategy, queries):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", default="intfloat/multilingual-e5-small")
+    ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--corpus", default=str(ROOT / "data/corpus"),
                     help="dossier contenant les .md du corpus (tous sont indexés)")
     ap.add_argument("--no-dense", action="store_true", help="BM25 seulement (rapide, sans modèle)")
@@ -146,6 +150,8 @@ def main():
     args = ap.parse_args()
     # suffixe des fichiers de résultats, pour que les variantes ne s'écrasent pas
     suffix = args.filtre + ("_stem" if args.bm25_stem else "")
+    if args.model != DEFAULT_MODEL and not args.no_dense:
+        suffix += "_" + args.model.split("/")[-1]
 
     corpus = load_corpus(args.corpus)
     print("Corpus :", ", ".join(corpus), f"— filtre : {args.filtre}")
@@ -175,16 +181,18 @@ def main():
             key = f"{sname} + {retr.name}"
             results[key] = evaluate(chunks, retr, queries)
             results[key]["n_chunks"] = len(chunks)
+            results[key]["embed_s"] = getattr(retr, "embed_s", None)
             by_strategy.setdefault(sname, {})[retr.name] = results[key]
 
     out = ROOT / "results"; out.mkdir(exist_ok=True)
     (out / f"retrieval_eval_{suffix}.json").write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    lines = ["| Configuration | Chunks | hit@1 | hit@3 | hit@5 | MRR@5 | Tokens top-5 |",
-             "|---|---|---|---|---|---|---|"]
+    lines = ["| Configuration | Chunks | hit@1 | hit@3 | hit@5 | MRR@5 | Tokens top-5 | Embeddings (s) |",
+             "|---|---|---|---|---|---|---|---|"]
     for k, r in results.items():
+        emb = f"{r['embed_s']:.0f}" if r["embed_s"] is not None else "—"
         lines.append(f"| {k} | {r['n_chunks']} | {r['hit@1']:.2f} | {r['hit@3']:.2f} | "
-                     f"{r['hit@5']:.2f} | {r['MRR@5']:.2f} | {r['tokens_top5']:.0f} |")
+                     f"{r['hit@5']:.2f} | {r['MRR@5']:.2f} | {r['tokens_top5']:.0f} | {emb} |")
     table = "\n".join(lines)
     (out / f"retrieval_eval_{suffix}.md").write_text(table + "\n", encoding="utf-8")
     print(table)

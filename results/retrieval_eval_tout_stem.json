@@ -362,7 +362,8 @@
         "top1_titre": null
       }
     ],
-    "n_chunks": 305
+    "n_chunks": 305,
+    "embed_s": null
   },
   "Taille fixe 500/50 + Dense (multilingual-e5-small)": {
     "hit@1": 0.3125,
@@ -696,7 +697,8 @@
         "top1_titre": null
       }
     ],
-    "n_chunks": 305
+    "n_chunks": 305,
+    "embed_s": 28.002046999987215
   },
   "Taille fixe 500/50 + Hybride (RRF)": {
     "hit@1": 0.5625,
@@ -1065,7 +1067,8 @@
         "top1_titre": null
       }
     ],
-    "n_chunks": 305
+    "n_chunks": 305,
+    "embed_s": 28.002046999987215
   },
   "Par article + BM25 (stem)": {
     "hit@1": 0.5625,
@@ -1363,7 +1366,8 @@
         "top1_titre": "Dispositions relatives au Bureau central de tarification"
       }
     ],
-    "n_chunks": 594
+    "n_chunks": 594,
+    "embed_s": null
   },
   "Par article + Dense (multilingual-e5-small)": {
     "hit@1": 0.59375,
@@ -1661,7 +1665,8 @@
         "top1_titre": "Défense pénale et recours"
       }
     ],
-    "n_chunks": 594
+    "n_chunks": 594,
+    "embed_s": 25.18426940002246
   },
   "Par article + Hybride (RRF)": {
     "hit@1": 0.625,
@@ -1959,6 +1964,7 @@
         "top1_titre": "Obligations de l'assureur et de l'assuré"
       }
     ],
-    "n_chunks": 594
+    "n_chunks": 594,
+    "embed_s": 25.18426940002246
   }
 }
