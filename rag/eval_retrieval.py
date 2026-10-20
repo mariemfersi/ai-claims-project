@@ -10,7 +10,8 @@ pour le top-5 (coût / bruit du contexte) et temps d'encodage du corpus.
 Configuration retenue : « Par article + Hybride (RRF) + --bm25-stem + bge-m3 »
 (MRR@5 0.79, hit@5 0.91 sur 32 requêtes ; avec e5-small : MRR@5 0.71, hit@5 0.81).
 Coût sur CPU : embeddings du corpus ~5 min (contre ~25 s pour e5-small), calculés
-une seule fois ; encodage d'une requête ~65 ms (contre ~9 ms pour e5-small).
+une seule fois ; encodage d'une requête ~60-65 ms (variable selon les lancements,
+voir rag/measure_query_time.py ; contre ~9 ms pour e5-small).
 La racinisation n'est pas active par défaut : passer --bm25-stem.
 Le filtre --filtre direct a été évalué et non retenu (5 requêtes sur 32 deviennent
 introuvables). Note d'historique : le commit 3d8a55c contient aussi l'hybride RRF

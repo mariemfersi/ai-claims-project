@@ -254,8 +254,8 @@ l'article classé 1er. L'équipe doit la relire.
 | Formes des mots | — | — | — | Plus aucun cas après la racinisation (voir 2.d). |
 | Synonymes | Q09 « Quels documents envoyer pour déclarer un sinistre ? » | 4 | 17 — Délais de déclaration | L'article 18 parle de « pièces à fournir », pas de « documents ». L'article 17 partage « déclarer ». |
 | Synonymes | Q11 « Facture de réparation gonflée… » | 50 | R125-6-1 | Les articles 23 et 25 parlent de « majoration volontaire du montant » et de « facture supérieure de plus de 30 % », pas de facture « gonflée ». |
+| Synonymes | Q25 « Dans quel délai l'assuré peut-il agir en justice… » | 10 | L211-12 | « Délai pour agir en justice » contre « prescription » des « actions dérivant du contrat » (L114-1). Le terme juridique existe dans le corpus : la reformulation par le LLM doit le retrouver. |
 | Connaissance manquante | Q17 « Accident survenu au Maroc… » | 19 | R211-8 | L'article 3 parle des pays de la « carte verte » sans les énumérer. Il faut savoir que le Maroc en fait partie. |
-| Connaissance manquante | Q25 « Dans quel délai l'assuré peut-il agir en justice… » | 10 | L211-12 | L114-1 parle de « prescription » des « actions dérivant du contrat ». Il faut savoir qu'« agir en justice » renvoie à la prescription. |
 | Bruit d'autres articles | Q03 « Délai pour déclarer un vol » | 2 | 9 — Vol et tentative de vol | L'article 9 contient « vol » et un « délai » (véhicule retrouvé sous 30 jours). |
 | Bruit d'autres articles | Q06 « Accident en état d'ivresse… » | 2 | A211-11-annexe | Une annexe longue, découpée en 9 chunks, arrive en tête de plusieurs requêtes. |
 | Bruit d'autres articles | Q12 « Dans quels cas un dossier doit passer en investigation ? » | 2 | 24 — Circuit de traitement | L'article 24, juste avant l'article 25 attendu, cite « investigation complémentaire » parmi les décisions possibles. |
@@ -263,7 +263,7 @@ l'article classé 1er. L'équipe doit la relire.
 | Bruit d'autres articles | Q27 « La victime peut-elle réclamer directement… » | 2 | A211-11-annexe | Même annexe que Q06. En plus, L124-3 parle de « tiers lésé » plutôt que de « victime ». |
 | Vérité terrain discutable | Q04 « Quelle franchise en cas de responsabilité partielle ? » | 2 | 20 — Tableau des franchises | L'article 21 attendu renvoie explicitement aux montants de l'article 20 : un article 20 en 1re position n'est pas une mauvaise réponse pour le LLM. Il y a aussi un écart de vocabulaire (« partielle » / « partagée »). |
 
-Bilan : 5 cas de bruit, 2 de synonymes, 2 de connaissance manquante, 1 de vérité terrain discutable et aucun de forme
+Bilan : 5 cas de bruit, 3 de synonymes, 1 de connaissance manquante, 1 de vérité terrain discutable et aucun de forme
 des mots. L'annexe A211-11 revient deux fois en 1re position : elle mérite un traitement spécifique,
 par exemple une pénalité ou un chunking dédié.
 
@@ -290,7 +290,7 @@ Commande : `python rag/eval_retrieval.py --bm25-stem`. bge-m3 est le modèle par
 
 **Reste à faire** :
 - **Reformulation des questions par le LLM dans le Policy Agent**, avant le retrieval. Elle doit traiter les
-  synonymes (Q09, Q11) et la connaissance manquante (Q17, Q25), en traduisant la question de l'utilisateur dans le
+  synonymes (Q09, Q11, Q25) et la connaissance manquante (Q17), en traduisant la question de l'utilisateur dans le
   vocabulaire du contrat et du Code : « facture gonflée » → « majoration du montant », « agir en justice » →
   « prescription », « Maroc » → « carte verte ».
 - **Traiter le bruit** de l'annexe A211-11, par exemple avec une pénalité, un chunking dédié ou une pondération par `lien_auto`.
@@ -324,3 +324,8 @@ Commande : `python rag/eval_retrieval.py --bm25-stem`. bge-m3 est le modèle par
 | 7ebd7b9 | Documente la configuration retenue à ce stade (e5-small). |
 | 0b990dc | Évaluation bge-m3, mesure du temps d'embeddings. |
 | 7ced6dd | bge-m3 retenu comme modèle dense par défaut ; fichiers de résultats suffixés par le nom du modèle. |
+| f3722d2 | Première version de cette synthèse. |
+| 4d0c97d | Synthèse corrigée (explication 415/428, source de chaque chiffre) ; ajout de `rag/check_token_lengths.py` et `rag/measure_query_time.py`. |
+| « RAG : synthèse finalisée » | Cohérence : temps par requête dans l'en-tête de `eval_retrieval.py`, historique complété, Q25 reclassée en synonymes. |
+
+Fin de la phase d'évaluation du retrieval ; pour la suite, voir git log.
