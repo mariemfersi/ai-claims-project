@@ -42,6 +42,20 @@ TYPES = {"collision": "collision", "sortie_de_route": "sortie de route sans autr
          "tentative_vol": "tentative de vol", "bris_de_glace": "bris de glace", "incendie": "incendie",
          "climatique": "événement climatique", "autre": "autre sinistre"}
 
+# Garanties du contrat susceptibles de couvrir chaque type de sinistre, de la plus spécifique
+# à la plus large (la collision suppose un autre véhicule : article 7 du contrat).
+GARANTIES_PAR_TYPE = {"collision": ["dommages_collision", "dommages_tous_accidents"],
+                      "sortie_de_route": ["dommages_tous_accidents"],
+                      "vol": ["vol"], "tentative_vol": ["vol"],
+                      "bris_de_glace": ["bris_de_glace", "dommages_tous_accidents"],
+                      "incendie": ["incendie_evenements_climatiques", "dommages_tous_accidents"],
+                      "climatique": ["incendie_evenements_climatiques", "dommages_tous_accidents"],
+                      "autre": ["dommages_tous_accidents"]}
+NOMS_GARANTIES = {"responsabilite_civile": "responsabilité civile", "dommages_tous_accidents": "dommages tous accidents",
+                  "dommages_collision": "dommages collision", "bris_de_glace": "bris de glace", "vol": "vol",
+                  "incendie_evenements_climatiques": "incendie et événements climatiques",
+                  "assistance": "assistance", "garantie_conducteur": "garantie du conducteur"}
+
 # Prompts : texte identique à prompts/PROMPTS.md (R1 v1 et P4 v1), à garder synchronisé.
 PROMPT_R1 = """Tu aides un moteur de recherche documentaire en assurance automobile.
 On te donne des questions sur un dossier de sinistre, rédigées en langage courant.
@@ -134,17 +148,39 @@ def parse_json(text):
 
 
 def sous_questions(intake):
-    """3 à 5 questions en langage courant, construites à partir des champs de l'intake."""
-    t = TYPES.get(intake.get("type_sinistre"), "sinistre")
+    """3 à 5 questions en langage courant, construites à partir des champs de l'intake.
+
+    Avec garanties_souscrites, la question « garantie » nomme la garantie souscrite qui
+    correspond au type de sinistre. Avec un tiers impliqué, la question « responsabilité »
+    (partage, constat, effet sur la franchise) remplace la question « franchise »."""
+    type_sinistre = intake.get("type_sinistre")
+    t = TYPES.get(type_sinistre, "sinistre")
     circ = (intake.get("circonstances") or "").strip()
     tiers = intake.get("tiers_implique")
-    avec_tiers = {True: "avec un tiers impliqué", False: "sans tiers impliqué"}.get(tiers, "")
-    qs = [("garantie", f"Quelle garantie couvre un sinistre de type {t} ? Circonstances : {circ}".strip()),
+    avec_tiers = {True: " avec un tiers impliqué", False: " sans tiers impliqué"}.get(tiers, "")
+    if type_sinistre == "sortie_de_route":
+        avec_tiers = ""  # déjà dit par « sans autre véhicule »
+    souscrites = intake.get("garanties_souscrites")
+    if souscrites is None:
+        garantie = f"Quelle garantie couvre un sinistre de type {t}{avec_tiers} ?"
+    else:
+        candidates = [g for g in GARANTIES_PAR_TYPE.get(type_sinistre, []) if g in souscrites]
+        if candidates:
+            nom = NOMS_GARANTIES.get(candidates[0], candidates[0].replace("_", " "))
+            garantie = f"La garantie {nom} couvre-t-elle un sinistre de type {t}{avec_tiers} ?"
+        else:
+            garantie = (f"Aucune garantie souscrite ne vise un sinistre de type {t} : "
+                        f"la responsabilité civile ou une autre garantie du contrat s'applique-t-elle ?")
+    qs = [("garantie", garantie),
           ("exclusions", f"Une exclusion de garantie s'applique-t-elle à ce sinistre ? Circonstances : {circ}"
            + (f" Usage du véhicule : {intake['usage_au_moment_du_sinistre']}."
-              if intake.get("usage_au_moment_du_sinistre") else "")),
-          ("franchise", f"Quelle franchise s'applique à un sinistre de type {t} {avec_tiers} ?".replace("  ", " ")),
-          ("delai_declaration", f"Quel est le délai pour déclarer un sinistre de type {t} ?")]
+              if intake.get("usage_au_moment_du_sinistre") else ""))]
+    if tiers:
+        qs.append(("responsabilite", "Comment la responsabilité est-elle partagée entre les conducteurs d'après le "
+                                     "constat amiable, et quelle franchise s'applique selon ce partage ?"))
+    else:
+        qs.append(("franchise", f"Quelle franchise s'applique à un sinistre de type {t}{avec_tiers} ?"))
+    qs.append(("delai_declaration", f"Quel est le délai pour déclarer un sinistre de type {t} ?"))
     conducteur, souscripteur = intake.get("conducteur"), intake.get("souscripteur")
     if conducteur and (not souscripteur or conducteur.strip().lower() != souscripteur.strip().lower()):
         qs.append(("conducteur", "Le véhicule était conduit par une autre personne que le souscripteur : "
@@ -260,7 +296,7 @@ def analyse_couverture(intake: dict) -> dict:
 
     extraits = "\n\n".join(f"[Article {a['article']} — source: {a['source']} — {a['titre']}]\n{a['texte']}"
                            for a in fournis)
-    dossier = {k: v for k, v in intake.items() if k != "souscripteur"}
+    dossier = {k: v for k, v in intake.items() if k != "souscripteur"}  # le nom n'apporte rien à P4
     user = (f"Dossier :\n{json.dumps(dossier, ensure_ascii=False, indent=1)}\n\n"
             f"Articles fournis ({len(fournis)}) :\n\n{extraits}")
     try:
@@ -275,19 +311,38 @@ def analyse_couverture(intake: dict) -> dict:
     return {**controler({k: rep[k] for k in champs}, fournis, avertissements), **trace}
 
 
-def intake_depuis_dossier(d):
-    """Intake simple construit à partir des champs d'un dossier synthétique (en attendant P1)."""
+# Résumés de test rédigés à la main, au format attendu de P1 (circonstances en 1 à 2 phrases
+# neutres, usage extrait du texte) ; à remplacer par la vraie sortie de P1 quand elle sera testée.
+INTAKE_TEST = {
+    "D01": {"circonstances": "Véhicule arrêté au feu rouge, percuté à l'arrière par un autre véhicule dont le "
+                             "conducteur a reconnu sa faute. Constat amiable rempli.",
+            "zone_impact_declaree": "arriere"},
+    "D02": {"circonstances": "Le véhicule a heurté un poteau en tournant, pendant une course VTC avec un client "
+                             "à bord.",
+            "usage_au_moment_du_sinistre": "transport de passager pour une application de VTC",
+            "zone_impact_declaree": "avant"},
+    "D07": {"circonstances": "Le fils du souscripteur, titulaire du permis depuis 1 an, a perdu le contrôle "
+                             "du véhicule dans un virage sous la pluie et a fini dans le fossé.",
+            "zone_impact_declaree": "lateral_droit"},
+}
+
+
+def intake_depuis_dossier(d, garanties_souscrites=None):
+    """Intake simple construit à partir d'un dossier synthétique, en attendant P1."""
     f = d.get("formulaire") or {}
-    return {"date_sinistre": f.get("date_sinistre"), "heure": None, "lieu": (d.get("constat") or {}).get("lieu"),
-            "type_sinistre": f.get("type"), "tiers_implique": f.get("tiers_implique"),
-            "conducteur": f.get("conducteur") or f.get("nom"), "souscripteur": f.get("nom"),
-            "circonstances": d.get("declaration"), "zone_impact_declaree": None,
-            "usage_au_moment_du_sinistre": None, "ecarts_formulaire": [], "remarques": []}
+    intake = {"date_sinistre": f.get("date_sinistre"), "heure": None, "lieu": (d.get("constat") or {}).get("lieu"),
+              "type_sinistre": f.get("type"), "tiers_implique": f.get("tiers_implique"),
+              "conducteur": f.get("conducteur") or f.get("nom"), "souscripteur": f.get("nom"),
+              "circonstances": d.get("declaration"), "zone_impact_declaree": None,
+              "usage_au_moment_du_sinistre": None, "ecarts_formulaire": [], "remarques": [],
+              "garanties_souscrites": garanties_souscrites}
+    return {**intake, **INTAKE_TEST.get(d["id"], {})}
 
 
 if __name__ == "__main__":
     data = json.loads((ROOT / "data/dossiers/dossiers_synthetiques.json").read_text(encoding="utf-8"))
+    garanties = data["contrat_reference"]["garanties"]
     for did in sys.argv[1:] or ["D01"]:
         d = next(x for x in data["dossiers"] if x["id"] == did)
         print(f"\n===== {did} — {d['scenario']} (attendu : {d['attendu']}) =====")
-        print(json.dumps(analyse_couverture(intake_depuis_dossier(d)), ensure_ascii=False, indent=2))
+        print(json.dumps(analyse_couverture(intake_depuis_dossier(d, garanties)), ensure_ascii=False, indent=2))
