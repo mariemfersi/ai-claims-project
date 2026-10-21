@@ -117,15 +117,15 @@ def rapport(lignes, meta):
            "fraude, procédures internes), que les sous-questions de couverture ne visent pas ; ils relèvent "
            "des agents Fraud et Decision.", "",
            "## Résultats par dossier", "",
-           "| Dossier | Attendu | Verdict | Verdict OK | Articles attendus | Fournis | Cités | Rappel | Précision "
-           "| Rappel fournis | Rappel périmètre | Confiance | Appels (cache / réseau) |",
+           "| Dossier | Attendu | Verdict | Verdict OK | Articles attendus | Fournis | Cités | Rappel (complet) "
+           "| Rappel (périmètre couverture) | Précision | Rappel fournis | Confiance | Appels (cache / réseau) |",
            "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for l in lignes:
         fournis = ", ".join(f"**{a}**" if a in l["attendus"] else a for a in l["fournis"])
         ok = "erreur d'appel" if l["erreur_appel"] else ("oui" if l["verdict_ok"] else "**non**")
         out.append(f"| {l['id']} | {l['decision_attendue']} | {l['verdict']} | {ok} "
                    f"| {', '.join(l['attendus'])} | {fournis} | {', '.join(l['cites']) or '—'} | {pct(l['rappel'])} "
-                   f"| {pct(l['precision'])} | {pct(l['rappel_fournis'])} | {pct(l['rappel_perimetre'])} "
+                   f"| {pct(l['rappel_perimetre'])} | {pct(l['precision'])} | {pct(l['rappel_fournis'])} "
                    f"| {l['confiance']} | {l['appels']['cache']} / {l['appels']['reseau']} |")
     repondus = [l for l in lignes if not l["erreur_appel"]]
     out += ["", "Dans la colonne « Fournis », les articles attendus sont en gras.", "", "## Moyennes", "",
@@ -133,11 +133,16 @@ def rapport(lignes, meta):
             "exclue(s), sauf pour le rappel des articles fournis, mesuré avant l'appel P4).", "",
             "| Métrique | Valeur |", "|---|---|",
             f"| Verdict cohérent | {sum(l['verdict_ok'] for l in repondus)} / {len(repondus)} |",
-            f"| Rappel des articles (cités) | {pct(moyenne(lignes, 'rappel'))} |",
+            f"| Rappel des articles cités, complet | {pct(moyenne(lignes, 'rappel'))} |",
+            f"| Rappel des articles cités, périmètre couverture | {pct(moyenne(lignes, 'rappel_perimetre'))} |",
             f"| Précision des articles (dossiers avec au moins un article cité) | {pct(moyenne(lignes, 'precision'))} |",
             f"| Rappel des articles fournis au LLM | {pct(moyenne(lignes, 'rappel_fournis'))} |",
-            f"| Rappel, périmètre couverture | {pct(moyenne(lignes, 'rappel_perimetre'))} |",
-            "", "## Échecs et cause", ""]
+            "", "Le rappel **complet** compte tous les articles attendus du dossier ; le rappel **périmètre "
+            "couverture** ne compte que ceux qui relèvent de l'analyse de couverture, sans les articles 18, 19, 23, "
+            "24, 25 et 26 (pièces, expertise, fraude, procédures internes), qui relèvent des agents Fraud et "
+            "Decision. Un écart entre les deux vient de ces articles hors périmètre, pas d'une erreur du Policy "
+            "Agent. Un dossier dont tous les articles attendus sont hors périmètre n'a pas de rappel périmètre "
+            "(« — ») et n'entre pas dans sa moyenne.", "", "## Échecs et cause", ""]
     for l in lignes:
         if l["causes"]:
             out.append(f"- **{l['id']}** ({l['scenario']}) :")
