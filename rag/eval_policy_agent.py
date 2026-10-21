@@ -4,6 +4,7 @@ Usage :
     python rag/eval_policy_agent.py                       # avec reformulation (2 appels Gemini par dossier)
     python rag/eval_policy_agent.py --sans-reformulation  # 1 appel par dossier
     python rag/eval_policy_agent.py --sans-cache          # nouveaux appels même si les réponses sont en cache
+    python rag/eval_policy_agent.py --reecrire            # écrase les résultats même si tout vient du cache
     python rag/eval_policy_agent.py --dossiers D01 D02
 
 Pour chaque dossier (conditions particulières depuis contrat_reference, intake construit
@@ -21,6 +22,10 @@ Avant de lancer, affiche le nombre d'appels Gemini prévus hors cache (sans comp
 nouveaux essais après une erreur 503). Si le quota est épuisé, s'arrête proprement :
 les résultats déjà obtenus sont écrits (results/eval_policy_agent[_sans_reformulation].md
 et .json), et les réponses déjà reçues restent dans le cache pour la reprise.
+
+Une relance dont toutes les réponses viennent du cache n'écrase pas les fichiers de résultats
+existants (ils décrivent le lancement d'origine : date, appels réseau) ; elle affiche seulement
+les résultats. --reecrire force l'écriture.
 """
 import argparse, json, time
 from pathlib import Path
@@ -172,6 +177,8 @@ def main():
     ap.add_argument("--dossiers", nargs="*", help="identifiants (par défaut : tous)")
     ap.add_argument("--sans-reformulation", action="store_true")
     ap.add_argument("--sans-cache", action="store_true")
+    ap.add_argument("--reecrire", action="store_true",
+                    help="écrase les résultats existants même si toutes les réponses viennent du cache")
     args = ap.parse_args()
     reformulation = not args.sans_reformulation
 
@@ -190,6 +197,13 @@ def main():
     meta = {"date": time.strftime("%Y-%m-%d %H:%M"), "modele": pa.os.environ.get("GEMINI_MODEL", pa.DEFAULT_MODEL),
             "effort": pa.os.environ.get("GEMINI_REASONING_EFFORT", "low") or "non envoyé",
             "reformulation": reformulation, "total": len(dossiers), "arret": None}
+    existants = [p for p in (ROOT / f"results/eval_policy_agent{suffixe}.md", ROOT / f"results/eval_policy_agent{suffixe}.json")
+                 if p.exists()]
+    # relance entièrement depuis le cache : les fichiers existants décrivent le lancement d'origine
+    proteger = not args.sans_cache and prevus == 0 and bool(existants) and not args.reecrire
+    if proteger:
+        print("Toutes les réponses sont en cache : les résultats existants ne seront pas écrasés "
+              "(--reecrire pour les remplacer).")
     lignes = []
     for d in dossiers:
         res = pa.analyse_couverture(pa.intake_depuis_dossier(d, cp), cache=not args.sans_cache,
@@ -203,10 +217,18 @@ def main():
         etat = "erreur d'appel" if l["erreur_appel"] else ("OK" if l["verdict_ok"] else "KO")
         print(f"{d['id']} : {l['verdict']} (attendu {l['decision_attendue']}, {etat}) "
               f"rappel {pct(l['rappel'])}, fournis {pct(l['rappel_fournis'])}, appels {l['appels']}")
-        ecrire(suffixe, lignes, meta)  # après chaque dossier : rien n'est perdu en cas d'arrêt
-    if meta["arret"] and lignes:
+        if proteger and l["appels"]["reseau"]:
+            proteger = False  # imprévu (cache supprimé entre-temps ?) : de nouvelles réponses, on les écrit
+            print("Appel réseau inattendu : les résultats seront écrits.")
+        if not proteger:
+            ecrire(suffixe, lignes, meta)  # après chaque dossier : rien n'est perdu en cas d'arrêt
+    if meta["arret"] and lignes and not proteger:
         ecrire(suffixe, lignes, meta)
-    print(f"Résultats : results/eval_policy_agent{suffixe}.md")
+    if proteger:
+        print(f"Résultats non écrits ; fichiers existants conservés : "
+              f"{', '.join(str(p.relative_to(ROOT)) for p in existants)}")
+    else:
+        print(f"Résultats : results/eval_policy_agent{suffixe}.md")
 
 
 if __name__ == "__main__":
