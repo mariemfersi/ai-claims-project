@@ -154,6 +154,19 @@ def rapport(lignes, meta):
     return "\n".join(out)
 
 
+def ecrire(suffixe, lignes, meta):
+    """Écrit le JSON et le rapport ; une section « ## Analyse » rédigée à la main dans le rapport
+    existant est conservée à la fin (à relire si les résultats ont changé)."""
+    md = ROOT / f"results/eval_policy_agent{suffixe}.md"
+    analyse = ""
+    if md.exists() and "\n## Analyse" in md.read_text(encoding="utf-8"):
+        analyse = md.read_text(encoding="utf-8").split("\n## Analyse", 1)[1]
+        analyse = f"\n## Analyse{analyse}"
+    (ROOT / f"results/eval_policy_agent{suffixe}.json").write_text(
+        json.dumps({"meta": meta, "dossiers": lignes}, ensure_ascii=False, indent=1), encoding="utf-8")
+    md.write_text(rapport(lignes, meta) + analyse, encoding="utf-8")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dossiers", nargs="*", help="identifiants (par défaut : tous)")
@@ -190,14 +203,9 @@ def main():
         etat = "erreur d'appel" if l["erreur_appel"] else ("OK" if l["verdict_ok"] else "KO")
         print(f"{d['id']} : {l['verdict']} (attendu {l['decision_attendue']}, {etat}) "
               f"rappel {pct(l['rappel'])}, fournis {pct(l['rappel_fournis'])}, appels {l['appels']}")
-        # écrit après chaque dossier : rien n'est perdu en cas d'arrêt
-        (ROOT / f"results/eval_policy_agent{suffixe}.json").write_text(
-            json.dumps({"meta": meta, "dossiers": lignes}, ensure_ascii=False, indent=1), encoding="utf-8")
-        (ROOT / f"results/eval_policy_agent{suffixe}.md").write_text(rapport(lignes, meta), encoding="utf-8")
+        ecrire(suffixe, lignes, meta)  # après chaque dossier : rien n'est perdu en cas d'arrêt
     if meta["arret"] and lignes:
-        (ROOT / f"results/eval_policy_agent{suffixe}.json").write_text(
-            json.dumps({"meta": meta, "dossiers": lignes}, ensure_ascii=False, indent=1), encoding="utf-8")
-        (ROOT / f"results/eval_policy_agent{suffixe}.md").write_text(rapport(lignes, meta), encoding="utf-8")
+        ecrire(suffixe, lignes, meta)
     print(f"Résultats : results/eval_policy_agent{suffixe}.md")
 
 

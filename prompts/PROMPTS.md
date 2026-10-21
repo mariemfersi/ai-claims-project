@@ -161,7 +161,18 @@ USER
 - ids renvoyés différents de ceux reçus : la reformulation est alors ignorée (le code garde la question d'origine) ;
 - en cas d'échec de l'appel, la recherche se fait avec les questions d'origine seulement (avertissement dans la trace).
 
-**Échecs observés / correctifs / avant-après** : à remplir après les premiers tests.
+**Échecs observés (v1, évaluation sur 10 dossiers, `gemini-3.5-flash-lite`, `reasoning_effort: minimal`,
+21 octobre 2026)** :
+- **Hallucination de domaine, D02, question 4 (délai de déclaration)** : reformulée en « Quel est le délai de
+  déclaration du sinistre imparti à l'assuré pour notifier **l'événement de mer** ou l'accident automobile à
+  l'assureur ? ». Le modèle introduit du vocabulaire d'assurance maritime, branche exclue du corpus. Le verdict de
+  D02 n'est pas affecté (« non_couvert », article 15 cité), mais la recherche de cette question est bruitée.
+  Correctif possible (v2) : règle « reste dans le domaine de l'assurance automobile ; n'introduis aucune notion
+  d'une autre branche (maritime, vie, habitation) ».
+- **Champ en trop** : lors d'un appel de test, le modèle a ajouté un champ `unite` non demandé ; sans effet, le code
+  ne lit que `id` et `reformulee`.
+
+**Correctifs / avant-après** : à remplir après la v2 de R1.
 
 ---
 
@@ -326,11 +337,23 @@ foi, L113-9, réduction de l'indemnité), D07 (investigate).
   par minute). Aucune réponse n'a été reçue, le cache `cache_llm/` est vide. Correctifs dans le code : au moins
   13 s entre deux appels, nouvel essai après 5 puis 10 s, arrêt immédiat si l'API demande d'attendre plus de 60 s.
   Rappel des articles fournis mesuré malgré tout (avant l'appel P4) : 100 % sur D01 et D02.
+- **Évaluation de bout en bout réussie (10 dossiers, `gemini-3.5-flash-lite`, `reasoning_effort: minimal`,
+  21 octobre 2026, `results/eval_policy_agent.md`)** : verdict cohérent 7 / 10, rappel complet 62 %, rappel
+  périmètre couverture 83 %. Les trois verdicts « couvert » au lieu d'investigation (D04, D05, D06) viennent
+  d'anomalies entre pièces que P4 ne reçoit pas (voir l'analyse du rapport).
+- **D06 (vol) : « couvert » sans réserve.** L'article 9 exige des traces matérielles d'effraction ou de forcement
+  et le dépôt d'une plainte dont la copie est remise à l'assureur. La justification se limite à « le véhicule a été
+  volé devant le domicile de l'assuré, ce qui active la garantie vol prévue à l'article 9 » et ne mentionne aucune
+  de ces conditions. Le dossier ne liste pas les pièces fournies : P4 ne pouvait pas savoir qu'elles manquaient,
+  mais il aurait dû dire qu'elles restaient à vérifier. Le prompt n'impose pas de relever les conditions de mise
+  en jeu d'une garantie.
 
 **Idées pour une v3** :
 - champ **`points_a_verifier`** : liste des faits à établir avant de conclure, chacun avec les articles qui en
   dépendent. Exemple pour D02 : « bonne foi de l'assuré à établir : si la fausse déclaration est intentionnelle,
   nullité du contrat (L113-8) ; sinon, réduction de l'indemnité proportionnelle aux primes (L113-9) ». Le verdict
   reste fondé sur l'exclusion contractuelle (article 15), mais la réponse montre au gestionnaire la question
-  juridique ouverte au lieu de la taire (échec observé en v2 + code v2.1 sur D02) ;
+  juridique ouverte au lieu de la taire (échec observé en v2 + code v2.1 sur D02). Exemple pour D06 : « couvert
+  sous réserve du récépissé de plainte et de traces d'effraction (article 9) » : les conditions de mise en jeu
+  d'une garantie deviennent des points à vérifier quand le dossier ne dit pas si elles sont remplies ;
 - le champ serait contrôlé comme `articles_cites` : chaque article d'un point à vérifier doit avoir été fourni.

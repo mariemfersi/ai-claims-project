@@ -1,0 +1,460 @@
+{
+ "meta": {
+  "date": "2026-10-21 18:03",
+  "modele": "gemini-3.5-flash-lite",
+  "effort": "minimal",
+  "reformulation": true,
+  "total": 10,
+  "arret": null
+ },
+ "dossiers": [
+  {
+   "id": "D01",
+   "scenario": "Sinistre simple, accepté",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "21",
+    "6"
+   ],
+   "cites": [
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "7",
+    "21",
+    "17",
+    "6",
+    "R211-10",
+    "D125-5-9",
+    "14",
+    "15",
+    "A125-6"
+   ],
+   "rappel": 0.6666666666666666,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.6666666666666666,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 2,
+    "reseau": 0,
+    "erreurs": []
+   },
+   "justification": "Le véhicule assuré a subi une collision à l'arrière alors qu'il était arrêté au feu rouge, et le tiers responsable a reconnu sa faute sur le constat amiable (conditions particulières). La garantie dommages tous accidents a été souscrite (conditions particulières) et couvre les dommages subis par le véhicule lors d'une collision avec un autre véhicule (Article 6). Le conducteur Sami Ben Salah est un conducteur désigné (conditions particulières). L'assuré n'étant pas responsable et le tiers responsable étant identifié, aucune franchise n'est appliquée conformément à l'Article 20.",
+   "causes": [
+    "article 21 fourni mais non cité : raisonnement"
+   ]
+  },
+  {
+   "id": "D02",
+   "scenario": "Exclusion applicable : usage VTC non déclaré",
+   "decision_attendue": "reject",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "15"
+   ],
+   "cites": [
+    "15"
+   ],
+   "fournis": [
+    "7",
+    "20",
+    "A121-1-annexe-7",
+    "15",
+    "6",
+    "L113-9",
+    "17",
+    "R211-10",
+    "L113-8",
+    "14"
+   ],
+   "rappel": 1.0,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 2,
+    "reseau": 0,
+    "erreurs": []
+   },
+   "justification": "Le véhicule était utilisé pour un transport de passager pour une application de VTC au moment du sinistre. L'usage déclaré aux conditions particulières est privé et trajet travail (conditions particulières). Les garanties dommages au véhicule ne sont pas acquises lorsque le véhicule est utilisé pour un usage non déclaré, notamment le transport onéreux de personnes (15). Par conséquent, la garantie dommages tous accidents ne peut pas s'appliquer pour cet événement.",
+   "causes": []
+  },
+  {
+   "id": "D03",
+   "scenario": "Incohérence de dates déclaration / constat",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "indetermine",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "17",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "20",
+    "21"
+   ],
+   "fournis": [
+    "20",
+    "7",
+    "21",
+    "17",
+    "15",
+    "6",
+    "D125-5-9",
+    "R211-10",
+    "A125-6",
+    "22"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.5,
+   "rappel_perimetre": 0.0,
+   "cites_non_attendus": [
+    "6",
+    "20",
+    "21"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "Le sinistre consiste en une collision avec un tiers identifié sur un parking, survenue avec le véhicule assuré conduit par Sami Ben Salah (dossier). La garantie dommages tous accidents a été souscrite (conditions particulières) et couvre les collisions avec un autre véhicule selon l'article 6. Le conducteur Sami Ben Salah est expressément désigné au contrat (conditions particulières), ce qui écarte l'application d'une franchise supplémentaire pour conducteur non désigné prévue à l'article 20. Cependant, les éléments du dossier ne permettent pas de déterminer le degré de responsabilité de l'assuré, la mention du tiers en marche arrière heurtant le véhicule ne suffisant pas à établir l'absence de responsabilité sans constat amiable ou application de la convention IRSA (article 21). Par conséquent, le niveau exact de la franchise applicable et le verdict définitif de couverture demeurent indéterminés en l'état des faits fournis.",
+   "causes": [
+    "article 17 fourni mais non cité : raisonnement",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)"
+   ]
+  },
+  {
+   "id": "D04",
+   "scenario": "Photos contredisant le récit (choc frontal déclaré, dommages arrière)",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "19",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "7",
+    "6",
+    "21",
+    "17",
+    "R211-10",
+    "R421-20",
+    "15",
+    "22",
+    "A125-6"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.0,
+   "rappel_perimetre": null,
+   "cites_non_attendus": [
+    "6",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "Le sinistre consiste en une collision frontale avec un tiers identifié endommageant l'avant du véhicule (dossier). La garantie dommages tous accidents a été souscrite (conditions particulières) et couvre les dommages subis par le véhicule assuré du fait d'une collision, que l'assuré soit responsable ou non (Article 6). Le conducteur Sami Ben Salah est un conducteur désigné (conditions particulières), ce qui exclut l'application de la franchise supplémentaire pour conducteur non désigné. Une franchise de 300 euros s'applique conformément au tableau des franchises (Article 20). Aucun élément ne permet de caractériser une exclusion ou un défaut de déclaration.",
+   "causes": [
+    "article 19 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "verdict « couvert » au lieu de indetermine ou partiel : raisonnement"
+   ]
+  },
+  {
+   "id": "D05",
+   "scenario": "Facture au montant gonflé",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "19",
+    "23",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "7",
+    "20",
+    "21",
+    "R421-18",
+    "17",
+    "A121-1-annexe-7",
+    "6",
+    "L211-4",
+    "15",
+    "R211-10"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.0,
+   "rappel_perimetre": null,
+   "cites_non_attendus": [
+    "6",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "Le sinistre est une collision avec un camion de livraison dont la plaque d'immatriculation a été relevée, ce qui caractérise un tiers identifié (conditions particulières). La garantie dommages tous accidents a été souscrite par l'assuré (conditions particulières) et couvre les dommages subis par le véhicule suite à une collision avec un autre véhicule (Article 6). Aucune exclusion liée à l'usage ou au conducteur n'est applicable aux faits du dossier (conditions particulières). Le tiers responsable étant identifié et l'assuré n'étant pas responsable de la collision, aucune franchise n'est appliquée conformément au tableau des franchises (Article 20). Le sinistre est donc entièrement couvert sans application de franchise (Article 20).",
+   "causes": [
+    "article 19 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 23 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "verdict « couvert » au lieu de indetermine ou partiel : raisonnement"
+   ]
+  },
+  {
+   "id": "D06",
+   "scenario": "Pièce manquante ou illisible",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "18",
+    "9"
+   ],
+   "cites": [
+    "9",
+    "20"
+   ],
+   "fournis": [
+    "9",
+    "R421-18",
+    "22",
+    "A121-1-annexe-7",
+    "20",
+    "17",
+    "15",
+    "R211-10",
+    "16",
+    "A125-6-4-2"
+   ],
+   "rappel": 0.5,
+   "precision": 0.5,
+   "rappel_fournis": 0.5,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "La garantie vol a bien été souscrite par l'assuré (conditions particulières). Le véhicule a été volé devant le domicile de l'assuré, ce qui active la garantie vol prévue à l'article 9 (Article 9, conditions particulières). L'indemnisation est soumise à une franchise de 10 % du montant des dommages avec un minimum de 300 euros (Article 20).",
+   "causes": [
+    "article 18 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "verdict « couvert » au lieu de indetermine ou partiel : raisonnement"
+   ]
+  },
+  {
+   "id": "D07",
+   "scenario": "Garantie ambiguë : sortie de route, conducteur non désigné",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "partiel",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "16",
+    "20",
+    "6"
+   ],
+   "cites": [
+    "6",
+    "16",
+    "20"
+   ],
+   "fournis": [
+    "16",
+    "R211-10",
+    "20",
+    "6",
+    "L113-9",
+    "7",
+    "14",
+    "17",
+    "L113-8",
+    "A125-6-4"
+   ],
+   "rappel": 1.0,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "La garantie dommages tous accidents a bien été souscrite (conditions particulières) et couvre les sorties de route sans tiers impliqué (6). Le véhicule était conduit par Youssef Ben Salah, qui n'est pas le conducteur désigné Sami Ben Salah (conditions particulières), ce qui active la franchise supplémentaire pour conducteur non désigné (16). Cette franchise supplémentaire est doublée puisque le conducteur est titulaire du permis depuis moins de trois ans (16, 20). Enfin, la franchise applicable cumule la franchise de base de 300 euros et la franchise supplémentaire de 1000 euros (20).",
+   "causes": []
+  },
+  {
+   "id": "D08",
+   "scenario": "Dossier avec déclaration audio",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "8"
+   ],
+   "cites": [
+    "8",
+    "20"
+   ],
+   "fournis": [
+    "8",
+    "A121-1-annexe-7",
+    "20",
+    "7",
+    "17",
+    "R211-11",
+    "L125-2",
+    "L121-18",
+    "R421-4",
+    "A125-6-4-2"
+   ],
+   "rappel": 1.0,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "La garantie bris de glace a été expressément souscrite (conditions particulières). Le sinistre consistant en un bris accidentel du pare-brise causé par un gravillon est couvert par le contrat (Article 8). Une franchise de 80 euros s'applique en cas de remplacement (Article 20). Le conducteur Sami Ben Salah est désigné au contrat (conditions particulières). Aucun élément ne s'oppose à la prise en charge de ce bris de glace.",
+   "causes": []
+  },
+  {
+   "id": "D09",
+   "scenario": "Déclaration hors délai (vol déclaré après 6 jours)",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "indetermine",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "17",
+    "9"
+   ],
+   "cites": [
+    "9",
+    "17",
+    "20"
+   ],
+   "fournis": [
+    "9",
+    "A121-1-annexe-7",
+    "20",
+    "17",
+    "15",
+    "7",
+    "22",
+    "16",
+    "A125-6-4",
+    "8"
+   ],
+   "rappel": 1.0,
+   "precision": 0.6666666666666666,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "Le sinistre déclaré est une tentative de vol avec vitre cassée et autoradio arraché (conditions particulières). La garantie vol et tentative de vol a bien été souscrite (conditions particulières) et couvre les détériorations consécutives à une tentative de vol (Article 9). Cependant, le dossier indique que le sinistre a eu lieu le 2026-09-25 et a été déclaré le 2026-10-01, soit au-delà du délai de deux jours ouvrés prévu en cas de tentative de vol, et le dossier ne précise pas si ce retard a causé un préjudice à l'assureur ni s'il s'agit d'un cas fortuit ou de force majeure permettant de statuer sur la déchéance de garantie (Article 17). La franchise applicable est de 10 % du montant des dommages avec un minimum de 300 euros (Article 20). Par conséquent, il est impossible de conclure définitivement sur la couverture sans ces informations complémentaires sur le délai de déclaration.",
+   "causes": []
+  },
+  {
+   "id": "D10",
+   "scenario": "Bris de glace simple, réparation d'impact",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "8"
+   ],
+   "cites": [
+    "8",
+    "20",
+    "A121-1-annexe-7"
+   ],
+   "fournis": [
+    "8",
+    "20",
+    "A121-1-annexe-7",
+    "17",
+    "7",
+    "R211-10",
+    "15",
+    "L113-2",
+    "A125-6-4",
+    "L121-18"
+   ],
+   "rappel": 1.0,
+   "precision": 0.6666666666666666,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [
+    "A121-1-annexe-7"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 2,
+    "erreurs": []
+   },
+   "justification": "La garantie bris de glace a bien été souscrite (conditions particulières). Le sinistre concerne un impact sur le pare-brise réparé sans remplacement (dossier). Selon l'article 8, cette garantie couvre la réparation du pare-brise à la suite d'un bris accidentel. Aucune franchise n'est appliquée en cas de réparation d'un impact sans remplacement du pare-brise (articles 8 et 20). Ce sinistre n'entraîne pas non plus l'application de majoration de bonus-malus conformément à l'article A121-1-annexe-7.",
+   "causes": []
+  }
+ ]
+}
