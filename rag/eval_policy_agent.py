@@ -1,8 +1,9 @@
 """Évaluation de bout en bout du Policy Agent sur les dossiers synthétiques.
 
 Usage :
-    python rag/eval_policy_agent.py                       # avec reformulation (2 appels Gemini par dossier)
-    python rag/eval_policy_agent.py --sans-reformulation  # 1 appel par dossier
+    python rag/eval_policy_agent.py                       # sans reformulation (1 appel Gemini par dossier)
+    python rag/eval_policy_agent.py --avec-reformulation  # 2 appels par dossier
+    python rag/eval_policy_agent.py --suffixe _v2_1_l1    # résultats dans results/eval_policy_agent_v2_1_l1.*
     python rag/eval_policy_agent.py --sans-cache          # nouveaux appels même si les réponses sont en cache
     python rag/eval_policy_agent.py --reecrire            # écrase les résultats même si tout vient du cache
     python rag/eval_policy_agent.py --dossiers D01 D02
@@ -20,7 +21,8 @@ par policy_agent.intake_depuis_dossier), compare la sortie de analyse_couverture
 
 Avant de lancer, affiche le nombre d'appels Gemini prévus hors cache (sans compter les
 nouveaux essais après une erreur 503). Si le quota est épuisé, s'arrête proprement :
-les résultats déjà obtenus sont écrits (results/eval_policy_agent[_sans_reformulation].md
+les résultats déjà obtenus sont écrits (results/eval_policy_agent<suffixe>.md ; suffixe par défaut :
+« _sans_reformulation », ou aucun avec --avec-reformulation, comme les fichiers du 21/10/2026
 et .json), et les réponses déjà reçues restent dans le cache pour la reprise.
 
 Une relance dont toutes les réponses viennent du cache n'écrase pas les fichiers de résultats
@@ -52,7 +54,7 @@ def appels_prevus(dossiers, cp, reformulation):
                 continue
             questions = pa.reformuler(questions, [], [], {"quota_epuise": False})  # lu dans le cache
         user, _ = pa.prompt_p4(intake, pa.retrouver_articles(questions))
-        n += not pa.cache_path(pa.PROMPT_P4, user).exists()
+        n += not pa.cache_path(pa.PROMPT_P4, user, pa.SCHEMA_P4).exists()
         detail[d["id"]] = n
         total += n
     return total, detail
@@ -177,12 +179,13 @@ def ecrire(suffixe, lignes, meta):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dossiers", nargs="*", help="identifiants (par défaut : tous)")
-    ap.add_argument("--sans-reformulation", action="store_true")
+    ap.add_argument("--avec-reformulation", action="store_true", help="active la reformulation R1 (désactivée par défaut)")
+    ap.add_argument("--suffixe", help="suffixe des fichiers de résultats (ex. _v2_1_l1)")
     ap.add_argument("--sans-cache", action="store_true")
     ap.add_argument("--reecrire", action="store_true",
                     help="écrase les résultats existants même si toutes les réponses viennent du cache")
     args = ap.parse_args()
-    reformulation = not args.sans_reformulation
+    reformulation = args.avec_reformulation
 
     data = json.loads((ROOT / "data/dossiers/dossiers_synthetiques.json").read_text(encoding="utf-8"))
     cp = data["contrat_reference"]
@@ -195,7 +198,7 @@ def main():
         print(f"Appels Gemini prévus hors cache : {prevus} "
               f"({', '.join(f'{k} : {v}' for k, v in detail.items())}), sans compter les nouveaux essais")
 
-    suffixe = "" if reformulation else "_sans_reformulation"
+    suffixe = args.suffixe if args.suffixe is not None else ("" if reformulation else "_sans_reformulation")
     meta = {"date": time.strftime("%Y-%m-%d %H:%M"), "modele": pa.os.environ.get("GEMINI_MODEL", pa.DEFAULT_MODEL),
             "effort": pa.os.environ.get("GEMINI_REASONING_EFFORT", "low") or "non envoyé",
             "reformulation": reformulation, "total": len(dossiers), "arret": None}

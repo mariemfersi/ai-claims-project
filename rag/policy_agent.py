@@ -3,6 +3,7 @@
 Usage :
     python rag/policy_agent.py D01 D02 D07     # test sur des dossiers synthétiques
     python rag/policy_agent.py D02 --sans-cache
+    python rag/policy_agent.py D02 --avec-reformulation
 
     from policy_agent import analyse_couverture
     resultat = analyse_couverture(intake)
@@ -13,7 +14,8 @@ Usage :
    délai de déclaration, conducteur s'il n'est pas désigné au contrat, déclaration du
    risque si l'usage diffère de l'usage déclaré ou si le conducteur n'est pas désigné).
 2. Reformulation par Gemini dans le vocabulaire du contrat et du Code (prompt R1,
-   prompts/PROMPTS.md). En cas d'échec, on garde les questions d'origine.
+   prompts/PROMPTS.md), désactivée par défaut (--avec-reformulation, reformulation=True).
+   En cas d'échec, on garde les questions d'origine.
 3. retriever.search(k=5) sur chaque question (origine + reformulée) ; fusion par
    article, au plus 10 articles : les 2 meilleurs de chaque recherche d'office, au moins 4
    du contrat quand il y en a parmi les résultats, puis la somme des scores RRF.
@@ -144,9 +146,41 @@ class GeminiError(Exception):
         self.quota = quota  # quota épuisé : inutile de lancer d'autres appels
 
 
-def _params(system, user):
+def _nullable(schema):
+    return {"anyOf": [schema, {"type": "null"}]}
+
+
+# Schéma de sortie de P4 (même structure que dans PROMPT_P4), envoyé en sortie structurée
+# (response_format json_schema, le mode JSON documenté pour l'endpoint compatible OpenAI).
+SCHEMA_P4 = {
+    "type": "object", "additionalProperties": False,
+    "required": ["garantie_applicable", "exclusions_applicables", "franchise", "verdict_couverture",
+                 "articles_cites", "justification", "confiance"],
+    "properties": {
+        "garantie_applicable": _nullable({"type": "object", "additionalProperties": False, "required": ["nom", "article"],
+                                          "properties": {"nom": {"type": "string"}, "article": {"type": "string"}}}),
+        "exclusions_applicables": {"type": "array", "items": {
+            "type": "object", "additionalProperties": False, "required": ["article", "motif"],
+            "properties": {"article": {"type": "string"}, "motif": {"type": "string"}}}},
+        "franchise": _nullable({"type": "object", "additionalProperties": False, "required": ["montant", "article", "detail"],
+                                "properties": {"montant": _nullable({"type": "string"}),
+                                               "article": _nullable({"type": "string"}),
+                                               "detail": {"type": "string"}}}),
+        "verdict_couverture": {"type": "string", "enum": sorted(VERDICTS)},
+        "articles_cites": {"type": "array", "items": {"type": "string"}},
+        "justification": {"type": "string"},
+        "confiance": {"type": "string", "enum": CONFIANCES},
+    },
+}
+
+
+def _params(system, user, schema=None):
+    """Paramètres de l'appel. Température 0 pour R1 et P4. Avec schema : sortie structurée
+    (json_schema) ; sinon mode JSON simple (json_object)."""
+    response_format = ({"type": "json_schema", "json_schema": {"name": "reponse", "strict": True, "schema": schema}}
+                       if schema else {"type": "json_object"})
     params = {"model": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL), "temperature": 0,
-              "response_format": {"type": "json_object"},
+              "response_format": response_format,
               "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     effort = os.environ.get("GEMINI_REASONING_EFFORT", "low")
     if effort:
@@ -154,27 +188,28 @@ def _params(system, user):
     return params
 
 
-def cache_path(system, user):
-    """Fichier de cache d'un appel : hash du modèle, du reasoning_effort et du prompt complet."""
-    p = _params(system, user)
+def cache_path(system, user, schema=None):
+    """Fichier de cache d'un appel : hash du modèle, du reasoning_effort, de la température,
+    du response_format (schéma compris) et du prompt complet."""
+    p = _params(system, user, schema)
     cle = json.dumps({k: p.get(k) for k in ("model", "reasoning_effort", "temperature", "response_format", "messages")},
                      ensure_ascii=False, sort_keys=True)
     return CACHE_DIR / f"{hashlib.sha256(cle.encode()).hexdigest()}.json"
 
 
-def call_gemini(system, user, etape="", journal=None, cache=True):
+def call_gemini(system, user, etape="", journal=None, cache=True, schema=None):
     """Appel Gemini en mode JSON. Renvoie le texte brut ; GeminiError en cas d'échec définitif.
     Chaque essai est ajouté à journal : {etape, essai, statut, duree_s} (statut « cache » si la
     réponse vient du cache disque)."""
     journal = journal if journal is not None else []
-    fichier = cache_path(system, user)
+    fichier = cache_path(system, user, schema)
     if cache and fichier.exists():
         journal.append({"etape": etape, "essai": 0, "statut": "cache", "duree_s": 0.0})
         return json.loads(fichier.read_text(encoding="utf-8"))["content"]
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise GeminiError("GEMINI_API_KEY non défini")
-    params = _params(system, user)
+    params = _params(system, user, schema)
     body = json.dumps(params)
     req = urllib.request.Request(GEMINI_URL, data=body.encode(), method="POST",
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
@@ -463,9 +498,10 @@ def controler(rep, fournis, avertissements):
     return rep
 
 
-def analyse_couverture(intake: dict, cache=True, reformulation=True) -> dict:
-    """cache=False : nouvel appel même si la réponse est en cache. reformulation=False : recherche
-    avec les questions d'origine seulement (un appel Gemini au lieu de deux)."""
+def analyse_couverture(intake: dict, cache=True, reformulation=False) -> dict:
+    """cache=False : nouvel appel même si la réponse est en cache. reformulation=True : les
+    sous-questions sont aussi reformulées par R1 (deux appels Gemini au lieu d'un). Désactivée par
+    défaut : aucun gain mesurable sur les 10 dossiers de test le 21/10/2026 (prompts/PROMPTS.md)."""
     avertissements, journal, etat = [], [], {"quota_epuise": False}
     questions = sous_questions(intake)
     if reformulation:
@@ -487,7 +523,7 @@ def analyse_couverture(intake: dict, cache=True, reformulation=True) -> dict:
 
     user, trace["trace"]["prompt_p4"] = prompt_p4(intake, fournis)
     try:
-        rep = parse_json(call_gemini(PROMPT_P4, user, "p4", journal, cache))
+        rep = parse_json(call_gemini(PROMPT_P4, user, "p4", journal, cache, schema=SCHEMA_P4))
     except GeminiError as e:
         trace["trace"]["quota_epuise"] = e.quota
         return indetermine(f"Analyse impossible : appel Gemini en échec ({e}).", **trace)
@@ -551,7 +587,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("dossiers", nargs="*", default=["D01"])
     ap.add_argument("--sans-cache", action="store_true", help="nouvel appel Gemini même si la réponse est en cache")
-    ap.add_argument("--sans-reformulation", action="store_true")
+    ap.add_argument("--avec-reformulation", action="store_true", help="active la reformulation R1 (désactivée par défaut)")
     args = ap.parse_args()
     data = json.loads((ROOT / "data/dossiers/dossiers_synthetiques.json").read_text(encoding="utf-8"))
     cp = data["contrat_reference"]
@@ -559,4 +595,4 @@ if __name__ == "__main__":
         d = next(x for x in data["dossiers"] if x["id"] == did)
         print(f"\n===== {did} — {d['scenario']} (attendu : {d['attendu']}) =====")
         print(json.dumps(analyse_couverture(intake_depuis_dossier(d, cp), cache=not args.sans_cache,
-                                            reformulation=not args.sans_reformulation), ensure_ascii=False, indent=2))
+                                            reformulation=args.avec_reformulation), ensure_ascii=False, indent=2))

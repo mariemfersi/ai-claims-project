@@ -165,3 +165,51 @@ la reformulation a été conçue pour des questions en langage courant (synonyme
 l'évaluation du retrieval : Q09, Q11, Q17, Q25). Elle reste à évaluer sur des questions libres, ou avec la vraie
 sortie de P1. En attendant, `--sans-reformulation` (ou `reformulation=False`) est le réglage le plus économe, sans
 perte observée.
+
+### Réglages v2.1 et stabilité (21 octobre 2026)
+
+Code v2.1 : reformulation désactivée par défaut, température 0, sortie structurée pour P4 (`response_format`
+`json_schema` avec le schéma de P4). Même modèle (`gemini-3.5-flash-lite`, `reasoning_effort: minimal`). Deux
+lancements de suite avec `--sans-cache` : `results/eval_policy_agent_v2_1_l1.md` et `_v2_1_l2.md`.
+
+| Métrique | 18 h 03 (avec reformulation) | Sans reformulation (18 h 47) | v2.1, lancement 1 | v2.1, lancement 2 |
+|---|---|---|---|---|
+| Verdicts corrects | 7 / 10 | 7 / 10 (dont D03 par hasard) | 7 / 10 | 6 / 10 |
+| Réponses P4 invalides | 0 | 1 (D03) | 0 | 0 |
+| Rappel complet | 62 % | 67 % | 67 % | 57 % |
+| Rappel périmètre couverture | 83 % | 83 % | 83 % | 71 % |
+| Précision | 58 % | 67 % | 53 % | 57 % |
+| Rappel des articles fournis | 70 % | 75 % | 75 % | 75 % |
+| Durée moyenne d'appel Gemini | non mesurée | 2,1 s | 4,3 s (D09 : 22,3 s) | 2,0 s |
+| Appels Gemini | 20 | 10 | 10 | 10 |
+
+| Dossier | Attendu | 18 h 03 | Sans reformulation | v2.1, lancement 1 | v2.1, lancement 2 |
+|---|---|---|---|---|---|
+| D01 | accept | couvert | couvert | couvert | couvert |
+| D02 | reject | non_couvert | non_couvert | non_couvert | non_couvert |
+| D03 | investigate | indetermine | indetermine (JSON invalide) | **couvert** | indetermine |
+| D04 | investigate | couvert | couvert | couvert | couvert |
+| D05 | investigate | couvert | couvert | couvert | couvert |
+| D06 | investigate | couvert | indetermine | indetermine | indetermine |
+| D07 | investigate | partiel | partiel | partiel | partiel |
+| D08 | accept | couvert | **partiel** | couvert | **partiel** |
+| D09 | investigate | indetermine | indetermine | indetermine | **couvert** |
+| D10 | accept | couvert | couvert | couvert | couvert |
+
+**Stabilité : les verdicts ne sont pas identiques entre les deux lancements v2.1.** 3 dossiers sur 10 changent
+(D03, D08, D09), alors que la température est à 0 et que les articles fournis sont identiques pour les 10 dossiers
+entre les deux lancements : la variation vient du modèle, pas du retrieval. Les articles cités varient aussi (D10 :
+8, 20 et A121-1-annexe-7 au lancement 1, 8 seul au lancement 2). Les dossiers instables sont les cas limites :
+D03 (responsabilité non établie sans constat), D08 (une franchise de 80 € rend-elle la couverture « partielle » ?),
+D09 (déclaration de tentative de vol au-delà de 2 jours ouvrés). Des 7 autres dossiers, 6 ont le même verdict dans
+les quatre lancements (D01, D02, D04, D05, D07, D10) ; D06 est « indetermine » dans les trois lancements sans
+reformulation, mais était « couvert » à 18 h 03, avec reformulation.
+
+Conséquences :
+- un écart d'un dossier entre deux configurations (par exemple 7 / 10 contre 6 / 10) est du même ordre que la
+  variation d'un lancement à l'autre de la même configuration : il ne permet pas de conclure. Comparer des
+  configurations demande plusieurs lancements chacune, ou un jeu de dossiers plus grand ;
+- la sortie structurée a supprimé les réponses invalides sur ces 20 appels (0 contre 1 sur les 10 précédents), sans
+  coût de durée visible ; c'est cohérent avec son objectif, mais 20 appels ne suffisent pas à le démontrer ;
+- pour la production, les cas limites (D08 : seuil de « partiel ») gagneraient à être tranchés par une règle dans le
+  prompt ou dans le code plutôt que laissés à l'appréciation du modèle.

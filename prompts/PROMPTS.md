@@ -172,6 +172,14 @@ USER
 - **Champ en trop** : lors d'un appel de test, le modèle a ajouté un champ `unite` non demandé ; sans effet, le code
   ne lit que `id` et `reformulee`.
 
+**Décision (21 octobre 2026) : R1 désactivé par défaut.** Comparaison sur les 10 dossiers de test, même modèle
+(`gemini-3.5-flash-lite`, `reasoning_effort: minimal`), avec et sans reformulation
+(`results/eval_policy_agent.md`, section Analyse) : 7 / 10 verdicts corrects dans les deux cas, écarts de rappel et
+de précision d'un dossier (dans le bruit), et deux fois plus d'appels Gemini avec R1 (20 contre 10). Aucun gain
+mesurable : les sous-questions sont déjà rédigées dans le vocabulaire du contrat, alors que R1 vise des questions en
+langage courant. R1 reste disponible (`--avec-reformulation`, `reformulation=True`) et sera réévalué sur des questions
+libres ou sur la vraie sortie de P1.
+
 **Correctifs / avant-après** : à remplir après la v2 de R1.
 
 ---
@@ -347,6 +355,16 @@ foi, L113-9, réduction de l'indemnité), D07 (investigate).
   de ces conditions. Le dossier ne liste pas les pièces fournies : P4 ne pouvait pas savoir qu'elles manquaient,
   mais il aurait dû dire qu'elles restaient à vérifier. Le prompt n'impose pas de relever les conditions de mise
   en jeu d'une garantie.
+
+**Réglages d'appel de P4 (code v2.1, 21 octobre 2026, prompt inchangé)** :
+- température 0 (déjà le cas pour R1 et P4 depuis la v1) ;
+- sortie structurée : `response_format` de type `json_schema` avec le schéma de P4 (`SCHEMA_P4` dans
+  `rag/policy_agent.py`, `strict: true`), au lieu du simple `json_object`. C'est le mode JSON documenté pour
+  l'endpoint compatible OpenAI (sortie structurée par schéma, via `chat.completions.parse` dans les SDK) ; le type
+  `json_object` n'y est pas mentionné. Motif : une réponse P4 invalide sur D03 lors de l'évaluation sans
+  reformulation. R1 garde `json_object` ;
+- la clé du cache inclut la température et le `response_format` (schéma compris) : les réponses obtenues avec
+  d'autres réglages ne sont pas réutilisées.
 
 **Idées pour une v3** :
 - champ **`points_a_verifier`** : liste des faits à établir avant de conclure, chacun avec les articles qui en
