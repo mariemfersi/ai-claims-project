@@ -32,3 +32,6 @@ Thumbs.db
 
 # Index Qdrant local (rag/index_qdrant.py)
 qdrant_db/
+
+# Cache des réponses Gemini (rag/policy_agent.py)
+cache_llm/

@@ -320,3 +320,17 @@ foi, L113-9, réduction de l'indemnité), D07 (investigate).
   À traiter dans une v3 si cette distinction doit figurer dans la réponse (consigne explicite, ou champ dédié).
 - **D07** : non testé en v2.1, quota journalier de l'offre gratuite atteint (20 requêtes par jour pour
   `gemini-3.8-flash`). Résultat v2 (fusion v2) : « partiel », articles 6, 16, 20, franchise 300 + 1 000 €.
+- **Évaluation de bout en bout (10 dossiers, `rag/eval_policy_agent.py`, 21 octobre 2026)** : pas encore de
+  résultat. Deux lancements ont échoué sur des erreurs d'infrastructure, pas du prompt : HTTP 503 (service
+  surchargé) à chaque essai sur D01 et D02, puis HTTP 429 (quota de l'offre gratuite, « limit: 5 », sans doute
+  par minute). Aucune réponse n'a été reçue, le cache `cache_llm/` est vide. Correctifs dans le code : au moins
+  13 s entre deux appels, nouvel essai après 5 puis 10 s, arrêt immédiat si l'API demande d'attendre plus de 60 s.
+  Rappel des articles fournis mesuré malgré tout (avant l'appel P4) : 100 % sur D01 et D02.
+
+**Idées pour une v3** :
+- champ **`points_a_verifier`** : liste des faits à établir avant de conclure, chacun avec les articles qui en
+  dépendent. Exemple pour D02 : « bonne foi de l'assuré à établir : si la fausse déclaration est intentionnelle,
+  nullité du contrat (L113-8) ; sinon, réduction de l'indemnité proportionnelle aux primes (L113-9) ». Le verdict
+  reste fondé sur l'exclusion contractuelle (article 15), mais la réponse montre au gestionnaire la question
+  juridique ouverte au lieu de la taire (échec observé en v2 + code v2.1 sur D02) ;
+- le champ serait contrôlé comme `articles_cites` : chaque article d'un point à vérifier doit avoir été fourni.

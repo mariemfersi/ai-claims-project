@@ -2,6 +2,7 @@
 
 Usage :
     python rag/policy_agent.py D01 D02 D07     # test sur des dossiers synthétiques
+    python rag/policy_agent.py D02 --sans-cache
 
     from policy_agent import analyse_couverture
     resultat = analyse_couverture(intake)
@@ -29,20 +30,33 @@ Appel via l'endpoint compatible OpenAI, comme le workflow n8n, avec reasoning_ef
 GEMINI_REASONING_EFFORT, « low » par défaut ; une valeur vide ne l'envoie pas.
 La trace contient la taille du prompt P4 et la durée de chaque appel.
 
+Cache disque des réponses Gemini dans cache_llm/ : la clé est un hash du modèle, du
+reasoning_effort et du prompt complet (système + utilisateur). Une réponse en cache ne
+consomme aucune requête ; dans la trace, l'appel a le statut « cache ». --sans-cache
+(ou cache=False) force un nouvel appel, dont la réponse remplace celle du cache.
+
 Champs ajoutés au schéma P1 (optionnels) :
 - conditions_particulieres : {garanties, usage_declare, conducteurs_designes, date_souscription},
   ce qui a été souscrit et déclaré (contrat_reference dans les dossiers de test) ;
 - souscripteur : nom du souscripteur, utilisé seulement si conducteurs_designes est absent.
 """
-import json, os, re, sys, time, urllib.error, urllib.request
+import argparse, hashlib, json, os, re, sys, time, urllib.error, urllib.request
 from pathlib import Path
 from chunking import n_tokens
 
 ROOT = Path(__file__).resolve().parent.parent
+CACHE_DIR = ROOT / "cache_llm"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 DEFAULT_MODEL = "gemini-3.8-flash"
 MAX_ATTEMPTS = 3          # 1 appel + 2 nouveaux essais
 TIMEOUT_S = 120
+# offre gratuite : 5 requêtes par minute (HTTP 429 « limit: 5 » observé) → au moins 13 s entre deux appels
+MIN_INTERVAL_S = float(os.environ.get("GEMINI_MIN_INTERVAL_S", 13))
+_dernier_appel = [0.0]
+
+
+def backoff(attempt):
+    return 5 * 2 ** (attempt - 1)  # 5 s, puis 10 s (erreurs 503 « surchargé » souvent en rafale)
 RETRYABLE_HTTP = {429, 500, 502, 503, 504}
 K_PAR_QUESTION = 5
 MAX_ARTICLES = 10
@@ -125,27 +139,51 @@ Schéma :
 
 
 class GeminiError(Exception):
-    pass
+    def __init__(self, message, quota=False):
+        super().__init__(message)
+        self.quota = quota  # quota épuisé : inutile de lancer d'autres appels
 
 
-def call_gemini(system, user, etape="", journal=None):
-    """Appel Gemini en mode JSON. Renvoie le texte brut ; GeminiError en cas d'échec définitif.
-    Chaque essai est ajouté à journal : {etape, essai, statut, duree_s}."""
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        raise GeminiError("GEMINI_API_KEY non défini")
+def _params(system, user):
     params = {"model": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL), "temperature": 0,
               "response_format": {"type": "json_object"},
               "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     effort = os.environ.get("GEMINI_REASONING_EFFORT", "low")
     if effort:
         params["reasoning_effort"] = effort
-    body = json.dumps(params)
+    return params
+
+
+def cache_path(system, user):
+    """Fichier de cache d'un appel : hash du modèle, du reasoning_effort et du prompt complet."""
+    p = _params(system, user)
+    cle = json.dumps({k: p.get(k) for k in ("model", "reasoning_effort", "temperature", "response_format", "messages")},
+                     ensure_ascii=False, sort_keys=True)
+    return CACHE_DIR / f"{hashlib.sha256(cle.encode()).hexdigest()}.json"
+
+
+def call_gemini(system, user, etape="", journal=None, cache=True):
+    """Appel Gemini en mode JSON. Renvoie le texte brut ; GeminiError en cas d'échec définitif.
+    Chaque essai est ajouté à journal : {etape, essai, statut, duree_s} (statut « cache » si la
+    réponse vient du cache disque)."""
     journal = journal if journal is not None else []
+    fichier = cache_path(system, user)
+    if cache and fichier.exists():
+        journal.append({"etape": etape, "essai": 0, "statut": "cache", "duree_s": 0.0})
+        return json.loads(fichier.read_text(encoding="utf-8"))["content"]
+    key = os.environ.get("GEMINI_API_KEY")
+    if not key:
+        raise GeminiError("GEMINI_API_KEY non défini")
+    params = _params(system, user)
+    body = json.dumps(params)
     req = urllib.request.Request(GEMINI_URL, data=body.encode(), method="POST",
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     last = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
+        attente = _dernier_appel[0] + MIN_INTERVAL_S - time.monotonic()
+        if attente > 0:
+            time.sleep(attente)
+        _dernier_appel[0] = time.monotonic()
         t0 = time.perf_counter()
 
         def log(statut):
@@ -158,6 +196,11 @@ def call_gemini(system, user, etape="", journal=None):
             if not isinstance(content, str):
                 raise GeminiError("réponse sans contenu texte")
             log("ok")
+            CACHE_DIR.mkdir(exist_ok=True)
+            fichier.write_text(json.dumps({"etape": etape, "modele": params["model"],
+                                           "reasoning_effort": params.get("reasoning_effort"),
+                                           "date": time.strftime("%Y-%m-%d %H:%M:%S"), "content": content},
+                                          ensure_ascii=False, indent=1), encoding="utf-8")
             return content
         except urllib.error.HTTPError as e:
             last = f"HTTP {e.code}"
@@ -166,18 +209,19 @@ def call_gemini(system, user, etape="", journal=None):
             log(f"{last} : {quota.group(0)}" if quota else last)  # 429 : le message dit quel quota
             if e.code not in RETRYABLE_HTTP:  # 400, 401, 403 : inutile de réessayer
                 raise GeminiError(f"{last} : {detail}")
-            wait = float(e.headers.get("Retry-After") or retry_delay(detail) or 2 ** attempt)
+            wait = float(e.headers.get("Retry-After") or retry_delay(detail) or backoff(attempt))
             if wait > 60:  # quota journalier épuisé (« retry in 9h38m… ») : réessayer ne sert à rien
-                raise GeminiError(f"{last} : quota épuisé, nouvel essai possible dans {wait / 3600:.1f} h")
+                raise GeminiError(f"{last} : quota épuisé, nouvel essai possible dans {wait / 3600:.1f} h",
+                                  quota=True)
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-            last, wait = f"réseau : {e}", 2 ** attempt
+            last, wait = f"réseau : {e}", backoff(attempt)
             log(last)
         except (KeyError, IndexError, json.JSONDecodeError) as e:
             log("réponse inattendue")
             raise GeminiError(f"réponse inattendue : {e!r}")
         if attempt < MAX_ATTEMPTS:
-            time.sleep(min(wait, 30))
-    raise GeminiError(f"échec après {MAX_ATTEMPTS} essais ({last})")
+            time.sleep(min(wait, 60))
+    raise GeminiError(f"échec après {MAX_ATTEMPTS} essais ({last})", quota=last == "HTTP 429")
 
 
 def retry_delay(message):
@@ -258,12 +302,16 @@ def sous_questions(intake):
     return [{"id": i, "theme": th, "originale": q} for i, (th, q) in enumerate(qs, 1)]
 
 
-def reformuler(questions, avertissements, journal):
-    user = json.dumps({"questions": [{"id": q["id"], "question": q["originale"]} for q in questions]},
+def message_r1(questions):
+    return json.dumps({"questions": [{"id": q["id"], "question": q["originale"]} for q in questions]},
                       ensure_ascii=False)
+
+
+def reformuler(questions, avertissements, journal, etat, cache=True):
     try:
-        obj = parse_json(call_gemini(PROMPT_R1, user, "reformulation", journal))
+        obj = parse_json(call_gemini(PROMPT_R1, message_r1(questions), "reformulation", journal, cache))
     except GeminiError as e:
+        etat["quota_epuise"] |= e.quota
         avertissements.append(f"Reformulation impossible ({e}) : recherche avec les questions d'origine seulement.")
         return questions
     by_id = {}
@@ -415,23 +463,33 @@ def controler(rep, fournis, avertissements):
     return rep
 
 
-def analyse_couverture(intake: dict) -> dict:
-    avertissements, journal = [], []
-    questions = reformuler(sous_questions(intake), avertissements, journal)
+def analyse_couverture(intake: dict, cache=True, reformulation=True) -> dict:
+    """cache=False : nouvel appel même si la réponse est en cache. reformulation=False : recherche
+    avec les questions d'origine seulement (un appel Gemini au lieu de deux)."""
+    avertissements, journal, etat = [], [], {"quota_epuise": False}
+    questions = sous_questions(intake)
+    if reformulation:
+        questions = reformuler(questions, avertissements, journal, etat, cache)
+    else:
+        avertissements.append("Reformulation désactivée : recherche avec les questions d'origine seulement.")
     fournis = retrouver_articles(questions)
     trace = {"trace": {"modele": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL),
                        "reasoning_effort": os.environ.get("GEMINI_REASONING_EFFORT", "low") or None,
-                       "sous_questions": questions,
+                       "reformulation": reformulation, "sous_questions": questions,
                        "articles_fournis": [{k: v for k, v in a.items() if k not in ("texte", "meilleur_chunk")}
                                             for a in fournis],
-                       "appels": journal, "avertissements": avertissements}}
+                       "appels": journal, "avertissements": avertissements, "quota_epuise": False}}
+    if etat["quota_epuise"]:  # P4 échouerait aussi : on n'envoie pas de requête inutile
+        trace["trace"]["quota_epuise"] = True
+        return indetermine("Analyse impossible : quota Gemini épuisé.", **trace)
     if not fournis:
         return indetermine("Aucun article retrouvé pour ce dossier.", **trace)
 
     user, trace["trace"]["prompt_p4"] = prompt_p4(intake, fournis)
     try:
-        rep = parse_json(call_gemini(PROMPT_P4, user, "p4", journal))
+        rep = parse_json(call_gemini(PROMPT_P4, user, "p4", journal, cache))
     except GeminiError as e:
+        trace["trace"]["quota_epuise"] = e.quota
         return indetermine(f"Analyse impossible : appel Gemini en échec ({e}).", **trace)
     champs = {"garantie_applicable", "exclusions_applicables", "franchise", "verdict_couverture",
               "articles_cites", "justification", "confiance"}
@@ -454,6 +512,26 @@ INTAKE_TEST = {
     "D07": {"circonstances": "Le fils du souscripteur, titulaire du permis depuis 1 an, a perdu le contrôle "
                              "du véhicule dans un virage sous la pluie et a fini dans le fossé.",
             "zone_impact_declaree": "lateral_droit"},
+    "D03": {"circonstances": "Sur le parking d'un supermarché, un véhicule en marche arrière a heurté une portière "
+                             "du véhicule assuré.",
+            "zone_impact_declaree": "inconnue"},
+    "D04": {"circonstances": "Collision frontale à un carrefour avec un véhicule qui n'a pas respecté la priorité ; "
+                             "tout l'avant du véhicule assuré est endommagé.",
+            "zone_impact_declaree": "avant"},
+    "D05": {"circonstances": "Le véhicule a été rayé et son rétroviseur gauche cassé par un camion de livraison qui "
+                             "a quitté les lieux ; l'assuré a relevé sa plaque d'immatriculation.",
+            "zone_impact_declaree": "lateral_gauche"},
+    "D06": {"circonstances": "Le véhicule a été volé devant le domicile de l'assuré dans la nuit du 1er au "
+                             "2 octobre 2026.",
+            "zone_impact_declaree": "inconnue"},
+    "D08": {"circonstances": "Un gravillon a frappé le pare-brise sur l'autoroute ; la fissure s'est agrandie "
+                             "pendant la nuit et le pare-brise doit être remplacé.",
+            "zone_impact_declaree": "vitrage"},
+    "D09": {"circonstances": "Au retour de vacances, l'assuré a constaté une vitre cassée et l'autoradio arraché.",
+            "zone_impact_declaree": "vitrage",
+            "remarques": ["Date de déclaration indiquée au formulaire : 2026-10-01."]},
+    "D10": {"circonstances": "Un petit impact sur le pare-brise a été réparé par le garage sans remplacement.",
+            "zone_impact_declaree": "vitrage"},
 }
 
 
@@ -470,9 +548,15 @@ def intake_depuis_dossier(d, conditions_particulieres=None):
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("dossiers", nargs="*", default=["D01"])
+    ap.add_argument("--sans-cache", action="store_true", help="nouvel appel Gemini même si la réponse est en cache")
+    ap.add_argument("--sans-reformulation", action="store_true")
+    args = ap.parse_args()
     data = json.loads((ROOT / "data/dossiers/dossiers_synthetiques.json").read_text(encoding="utf-8"))
     cp = data["contrat_reference"]
-    for did in sys.argv[1:] or ["D01"]:
+    for did in args.dossiers:
         d = next(x for x in data["dossiers"] if x["id"] == did)
         print(f"\n===== {did} — {d['scenario']} (attendu : {d['attendu']}) =====")
-        print(json.dumps(analyse_couverture(intake_depuis_dossier(d, cp)), ensure_ascii=False, indent=2))
+        print(json.dumps(analyse_couverture(intake_depuis_dossier(d, cp), cache=not args.sans_cache,
+                                            reformulation=not args.sans_reformulation), ensure_ascii=False, indent=2))
