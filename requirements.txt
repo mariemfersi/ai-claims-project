@@ -4,3 +4,4 @@ tiktoken
 sentence-transformers
 snowballstemmer
 qdrant-client
+streamlit
