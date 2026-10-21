@@ -121,3 +121,47 @@ mesure plus juste.
   pas affecté (« non_couvert », article 15 cité), mais la recherche correspondante est bruitée.
 - Avec 10 dossiers, un dossier vaut 10 % du score de verdict : ces chiffres décrivent ce jeu de test, pas une
   performance générale.
+
+### Comparaison avec et sans reformulation
+
+Même modèle (`gemini-3.5-flash-lite`, `reasoning_effort: minimal`), mêmes intakes, même retrieval. Avec
+reformulation : lancement du 21 octobre 2026 à 18 h 03 (ce rapport). Sans reformulation : lancement du même jour à
+18 h 47 (`results/eval_policy_agent_sans_reformulation.md`). Un seul lancement chacun, à température 0.
+
+| Métrique | Avec reformulation | Sans reformulation |
+|---|---|---|
+| Verdicts corrects | 7 / 10 | 7 / 10, dont 1 par hasard (D03, réponse P4 invalide) |
+| Rappel complet | 62 % | 67 % |
+| Rappel périmètre couverture | 83 % | 83 % |
+| Précision | 58 % | 67 % |
+| Rappel des articles fournis | 70 % | 75 % |
+| Durée moyenne par dossier | non mesurée (durées ajoutées au script après ce lancement) | 11,9 s, dont 2,2 s d'appel Gemini |
+| Appels Gemini | 20 (2 par dossier) | 10 (1 par dossier) |
+
+La durée sans reformulation comprend l'attente d'au moins 13 s imposée entre deux appels pour respecter la limite
+de l'offre gratuite ; avec reformulation, cette attente s'ajoute une fois de plus par dossier.
+
+**Dossiers dont le verdict change** :
+- **D06** (vol) : « couvert » → « indetermine », verdict correct sans reformulation. Sans reformulation, l'article 18
+  (pièces à fournir) fait partie des articles fournis, et la justification relève que « le dossier ne précise pas si
+  un dépôt de plainte a été effectué ni si des traces matérielles d'effraction ont été constatées » (articles 9 et 18).
+  C'est exactement la réserve qui manquait avec reformulation.
+- **D08** (bris de glace) : « couvert » → « partiel », verdict incorrect sans reformulation. Les articles attendus (8,
+  20) sont fournis et cités dans les deux cas ; le modèle classe en « partiel » une franchise de 80 €, qui ne réduit
+  pas « nettement » l'indemnisation au sens du prompt. C'est une variation du raisonnement, pas du retrieval.
+- **D03** : « indetermine » dans les deux cas, mais sans reformulation la réponse P4 était un JSON invalide : le
+  verdict « indetermine » vient du code, pas d'une analyse.
+
+**Articles fournis** : ils changent pour les 10 dossiers (1 à 4 articles sur 10 remplacés), mais les articles
+attendus fournis ne changent que pour D06 (+ 18). Les autres remplacements portent sur des articles non attendus,
+pas toujours anodins : sans reformulation, L113-8 (nullité pour fausse déclaration intentionnelle) n'est plus
+fourni pour D02 ni D07, et l'article 16 (conducteur non désigné) ou 23 (fraude) apparaissent dans plusieurs dossiers.
+
+**La reformulation justifie-t-elle son appel supplémentaire ?** Pas sur ce jeu de test. Elle double le nombre
+d'appels Gemini (donc la consommation du quota) sans gain mesurable : mêmes verdicts corrects une fois D03 mis à
+part, et des écarts de rappel et de précision d'un dossier, dans le bruit à 10 dossiers. Ce résultat s'explique :
+les sous-questions sont générées par des modèles de phrase déjà rédigés dans le vocabulaire du contrat, alors que
+la reformulation a été conçue pour des questions en langage courant (synonymes et connaissance manquante de
+l'évaluation du retrieval : Q09, Q11, Q17, Q25). Elle reste à évaluer sur des questions libres, ou avec la vraie
+sortie de P1. En attendant, `--sans-reformulation` (ou `reformulation=False`) est le réglage le plus économe, sans
+perte observée.

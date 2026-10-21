@@ -62,7 +62,9 @@ def mesurer(d, res):
     attendu = d["attendu"]
     erreurs_appel = [c["statut"] for c in res["trace"]["appels"] if c["statut"] not in ("ok", "cache")]
     appels = {"cache": sum(c["statut"] == "cache" for c in res["trace"]["appels"]),
-              "reseau": sum(c["statut"] != "cache" for c in res["trace"]["appels"]), "erreurs": erreurs_appel}
+              "reseau": sum(c["statut"] != "cache" for c in res["trace"]["appels"]), "erreurs": erreurs_appel,
+              # temps passé dans les appels Gemini (essais compris), hors attente entre deux appels
+              "duree_api_s": round(sum(c["duree_s"] for c in res["trace"]["appels"] if c["statut"] != "cache"), 1)}
     fournis = [a["article"] for a in res["trace"]["articles_fournis"]]
     if res["justification"].startswith("Analyse impossible"):
         # pas de réponse P4 : ni le retrieval ni le raisonnement ne sont en cause, dossier exclu des métriques
@@ -206,6 +208,7 @@ def main():
               "(--reecrire pour les remplacer).")
     lignes = []
     for d in dossiers:
+        t0 = time.perf_counter()
         res = pa.analyse_couverture(pa.intake_depuis_dossier(d, cp), cache=not args.sans_cache,
                                     reformulation=reformulation)
         if res["trace"]["quota_epuise"]:
@@ -213,6 +216,8 @@ def main():
             print(f"{d['id']} : quota Gemini épuisé, arrêt ({len(lignes)} dossiers évalués)")
             break
         lignes.append(mesurer(d, res))
+        # durée totale : retrieval, appels Gemini et attente imposée entre deux appels (MIN_INTERVAL_S)
+        lignes[-1]["duree_dossier_s"] = round(time.perf_counter() - t0, 1)
         l = lignes[-1]
         etat = "erreur d'appel" if l["erreur_appel"] else ("OK" if l["verdict_ok"] else "KO")
         print(f"{d['id']} : {l['verdict']} (attendu {l['decision_attendue']}, {etat}) "
