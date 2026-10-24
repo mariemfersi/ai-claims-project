@@ -20,6 +20,12 @@ class Claim(models.Model):
     description = models.TextField()
     incident_date = models.DateField()
     location = models.CharField(max_length=200)
+    assigned_contact = models.ForeignKey("InsuranceContact", related_name="assigned_claims", null=True, blank=True, on_delete=models.SET_NULL)
+    handoff_at = models.DateTimeField(null=True, blank=True)
+    handoff_note = models.TextField(blank=True)
+    handoff_email_status = models.CharField(max_length=24, blank=True)
+    handoff_email_sent_at = models.DateTimeField(null=True, blank=True)
+    handoff_email_error = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED)
     decision = models.CharField(max_length=20, choices=Decision.choices, blank=True)
     confidence = models.FloatField(null=True, blank=True)
@@ -33,6 +39,22 @@ class Claim(models.Model):
 
     def __str__(self):
         return f"{self.id} - {self.customer_name}"
+
+
+class InsuranceContact(models.Model):
+    name = models.CharField(max_length=160)
+    role = models.CharField(max_length=120)
+    insurer = models.CharField(max_length=160, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=40, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["insurer", "name"]
+
+    def __str__(self):
+        return f"{self.name} — {self.role}"
 
 
 class ClaimDocument(models.Model):

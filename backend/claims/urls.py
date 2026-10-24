@@ -3,10 +3,12 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ClaimViewSet, internal_claim, complete_claim, run_document_agent,
     run_vision_agent, run_policy_agent, run_fraud_agent, run_decision_agent, system_info,
+    InsuranceContactViewSet,
 )
 
 router = DefaultRouter()
 router.register("claims", ClaimViewSet, basename="claim")
+router.register("contacts", InsuranceContactViewSet, basename="insurance-contact")
 
 urlpatterns = [
     path("", include(router.urls)),

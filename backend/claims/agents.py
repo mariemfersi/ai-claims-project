@@ -76,7 +76,58 @@ def _parse(kind, schema, system_prompt, content, images=None):
         timeout=settings.AI_REQUEST_TIMEOUT,
     )
     response.raise_for_status()
-    return schema.model_validate(json.loads(response.json()["message"]["content"])).model_dump()
+    payload = json.loads(response.json()["message"]["content"])
+    if schema is PolicyAnalysis:
+        payload = _normalize_policy_payload(payload)
+    return schema.model_validate(payload).model_dump()
+
+
+def _normalize_policy_payload(payload):
+    """Normalise les petites variations JSON produites par les modèles Ollama locaux."""
+    if not isinstance(payload, dict):
+        payload = {}
+    raw_status = str(payload.get("coverage_status", "insufficient_information")).lower().strip()
+    status_aliases = {
+        "couvert": "covered", "couverte": "covered", "garanti": "covered",
+        "exclu": "excluded", "exclue": "excluded", "non couvert": "excluded",
+        "inconnu": "insufficient_information", "indéterminé": "insufficient_information",
+        "unknown": "insufficient_information", "insufficient": "insufficient_information",
+    }
+    status = status_aliases.get(raw_status, raw_status)
+    if status not in {"covered", "excluded", "insufficient_information"}:
+        status = "insufficient_information"
+
+    articles = payload.get("applicable_articles") or []
+    if isinstance(articles, (str, int)):
+        articles = [articles]
+    normalized_articles = []
+    for article in articles if isinstance(articles, list) else []:
+        if isinstance(article, dict):
+            page = article.get("page") or article.get("article") or article.get("reference")
+            article = f"Page {page}" if page is not None else ""
+        if str(article).strip():
+            normalized_articles.append(str(article).strip())
+
+    missing = payload.get("missing_information") or []
+    if isinstance(missing, str):
+        missing = [missing]
+    confidence = payload.get("confidence", 0.25)
+    try:
+        confidence = float(confidence)
+        if confidence > 1:
+            confidence /= 100
+    except (TypeError, ValueError):
+        confidence = 0.25
+    explanation = payload.get("explanation") or "La couverture ne peut pas être confirmée avec les éléments disponibles."
+    if isinstance(explanation, list):
+        explanation = " ".join(str(item) for item in explanation)
+    return {
+        "coverage_status": status,
+        "applicable_articles": normalized_articles,
+        "explanation": str(explanation),
+        "missing_information": [str(item) for item in missing] if isinstance(missing, list) else [],
+        "confidence": max(0.0, min(1.0, confidence)),
+    }
 
 
 def _read_document(document):
@@ -176,11 +227,29 @@ def vision_agent(claim):
     engine = "local-fallback"
     if _provider_enabled() and docs:
         try:
-            analysis = _parse("vision", VisionAnalysis, "Inspecte seulement ce qui est visible. N'identifie personne et ne conclus jamais à une fraude. Lis aussi les textes utiles visibles (OCR). severity: low, medium, high ou unknown.", "Analyse ces photos du véhicule après le sinistre.", _image_content(docs))
+            analysis = _parse("vision", VisionAnalysis, "Inspecte seulement ce qui est visible. N'identifie personne et ne conclus jamais à une fraude. Réponds en français. Lis aussi les textes utiles visibles (OCR). damaged_areas doit contenir une ou plusieurs zones normalisées parmi rear, front, left, right, rear-left, rear-right, front-left, front-right. severity: low, medium, high ou unknown.", "Analyse ces photos du véhicule après le sinistre.", _image_content(docs))
+            analysis = _normalize_vision_analysis(analysis)
             engine = "ollama"
         except Exception as exc:
             analysis["observations"] = [f"Fallback local: {type(exc).__name__} lors de l'appel Ollama."]
     return {"agent": "vision", "engine": engine, "model": _model("vision") if engine != "local-fallback" else None, "photos": photos, **analysis}
+
+
+def _normalize_vision_analysis(analysis):
+    observations = " ".join(str(item) for item in analysis.get("observations", [])).lower()
+    areas = [str(area).lower().strip() for area in analysis.get("damaged_areas", []) if str(area).strip()]
+    aliases = {
+        "arrière": "rear", "pare-chocs arrière": "rear", "coffre": "rear",
+        "avant": "front", "gauche": "left", "droite": "right",
+    }
+    areas = [aliases.get(area, area) for area in areas]
+    if analysis.get("visible_damage") and not areas:
+        if any(term in observations for term in ("rear", "trunk", "taillight", "arrière", "coffre")):
+            areas.append("rear")
+        elif any(term in observations for term in ("front", "hood", "headlight", "avant", "capot")):
+            areas.append("front")
+    analysis["damaged_areas"] = list(dict.fromkeys(areas))
+    return analysis
 
 
 def _cosine(a, b):
@@ -255,29 +324,58 @@ def _local_retrieve(query):
 
 
 def policy_agent(claim):
-    query = f"{claim.description}\nDate: {claim.incident_date}\nLieu: {claim.location}"
+    query = (
+        f"Sinistre automobile: {claim.description}\n"
+        "Garanties recherchées: dommages au véhicule, collision, dommages tous accidents, "
+        "choc avec un tiers, responsabilité civile et exclusions applicables.\n"
+        f"Date: {claim.incident_date}\nLieu: {claim.location}"
+    )
     retrieved = _local_retrieve(query)
     selected = retrieved[0] if retrieved else None
     analysis = {"coverage_status": "insufficient_information", "applicable_articles": [], "explanation": "Des passages contractuels ont été retrouvés, mais le fallback lexical ne décide pas seul de la couverture.", "missing_information": ["Conditions particulières et garanties souscrites"], "confidence": 0.25 if selected else 0.1}
     engine = "local-fallback"
+    diagnostic_error = None
     if _provider_enabled():
         try:
             retrieved = _retrieve(query)
             context = "\n\n".join(f"[Page {a['page']} - {a['section']}]\n{a['text']}" for a in retrieved)
-            analysis = _parse("policy", PolicyAnalysis, "Vérifie la couverture uniquement avec les extraits contractuels AXA fournis. coverage_status: covered, excluded ou insufficient_information. Les garanties dépendent aussi des Conditions particulières : si elles manquent et empêchent une conclusion certaine, réponds insufficient_information. Dans applicable_articles, cite les pages sous la forme 'Page 42'.", f"SINISTRE\n{query}\n\nEXTRAITS CONTRACTUELS\n{context}")
+            analysis = _parse("policy", PolicyAnalysis, "Vérifie la couverture uniquement avec les extraits contractuels AXA fournis. Cherche en priorité dommages au véhicule, collision et dommages tous accidents. coverage_status: covered uniquement si la garantie souscrite est confirmée; excluded uniquement si une exclusion explicite correspond au sinistre; sinon insufficient_information. Les garanties dépendent aussi des Conditions particulières : si elles manquent ou si le pays du contrat ne correspond pas au dossier, réponds insufficient_information. Dans applicable_articles, cite les pages sous la forme 'Page 42'.", f"SINISTRE\n{query}\n\nEXTRAITS CONTRACTUELS\n{context}")
             engine = "ollama-rag"
         except Exception as exc:
-            analysis["explanation"] += f" Fallback local ({type(exc).__name__})."
+            diagnostic_error = type(exc).__name__
+    location_and_policy = f"{claim.location} {claim.policy_number}".lower()
+    tunisian_case = any(marker in location_and_policy for marker in ("tunis", "tunisie", "-tn", "tn-"))
+    if POLICY_CORPUS.get("country") == "France" and tunisian_case:
+        analysis["coverage_status"] = "insufficient_information"
+        analysis["explanation"] = "Le corpus disponible est un contrat AXA France, alors que le dossier est tunisien. La couverture doit être vérifiée dans le contrat réellement souscrit."
+        missing = list(analysis.get("missing_information", []))
+        if "Contrat tunisien et Conditions particulières" not in missing:
+            missing.append("Contrat tunisien et Conditions particulières")
+        analysis["missing_information"] = missing
+        analysis["confidence"] = min(analysis.get("confidence", 0.25), 0.45)
     cited_pages = {int(value.lower().replace("page", "").strip()) for value in analysis["applicable_articles"] if value.lower().replace("page", "").strip().isdigit()}
     refs = [chunk for chunk in retrieved if chunk["page"] in cited_pages] or retrieved[:3]
-    return {"agent": "policy_rag", "engine": engine, "model": _model("policy") if engine != "local-fallback" else None, "embedding_model": _model("embedding") if engine != "local-fallback" else None, "coverage_status": analysis["coverage_status"], "references": refs, "retrieved_chunks": retrieved, "retrieval_query": query, "explanation": analysis["explanation"], "missing_information": analysis["missing_information"], "confidence": analysis["confidence"]}
+    refs = [{**chunk, "text": chunk["text"][:600].rstrip() + ("…" if len(chunk["text"]) > 600 else "")} for chunk in refs]
+    return {"agent": "policy_rag", "engine": engine, "model": _model("policy") if engine != "local-fallback" else None, "embedding_model": _model("embedding") if engine != "local-fallback" else None, "coverage_status": analysis["coverage_status"], "references": refs, "retrieved_chunks": retrieved, "retrieval_query": query, "explanation": analysis["explanation"], "missing_information": analysis["missing_information"], "confidence": analysis["confidence"], "diagnostic_error": diagnostic_error}
 
 
 def fraud_agent(document_result, vision_result, policy_result):
     inconsistencies = []
     description = document_result["claim_facts"]["description"].lower()
-    if "frontal" in description and "rear" in vision_result.get("damaged_areas", []):
-        inconsistencies.append({"type": "damage_location_mismatch", "severity": "high", "points": 50, "evidence": "La déclaration mentionne un choc frontal, mais l'analyse visuelle indique un dommage arrière."})
+    declared_areas = set()
+    if any(term in description for term in ("arrière", "arriere", "rear", "coffre")):
+        declared_areas.add("rear")
+    if any(term in description for term in ("frontal", "avant", "front", "capot")):
+        declared_areas.add("front")
+    visual_areas = set()
+    for area in vision_result.get("damaged_areas", []):
+        normalized = str(area).lower()
+        if any(term in normalized for term in ("rear", "arrière", "arriere")):
+            visual_areas.add("rear")
+        if any(term in normalized for term in ("front", "avant")):
+            visual_areas.add("front")
+    if declared_areas and visual_areas and declared_areas.isdisjoint(visual_areas):
+        inconsistencies.append({"type": "damage_location_mismatch", "severity": "high", "points": 50, "evidence": f"La déclaration situe le choc à {', '.join(sorted(declared_areas))}, mais l'analyse visuelle situe les dommages à {', '.join(sorted(visual_areas))}."})
     if document_result.get("missing_documents"):
         inconsistencies.append({"type": "missing_document", "severity": "medium", "points": 25, "evidence": "Une pièce justificative requise n'a pas été fournie."})
     risk = min(100, sum(x["points"] for x in inconsistencies))
@@ -292,7 +390,9 @@ def decision_agent(document_result, vision_result, policy_result, fraud_result):
     if status == "insufficient_information": penalties.append({"reason": "Couverture non retrouvée", "value": 0.20})
     if risk: penalties.append({"reason": "Risque détecté", "value": round((risk / 100) * 0.25, 3)})
     confidence = round(max(0.45, min(0.95, 0.95 - sum(x["value"] for x in penalties))), 3)
-    if status in {"excluded", "insufficient_information"}: decision, reasons = "REJECT", [policy_result.get("explanation", "Garantie non applicable.")]
-    elif risk: decision, reasons = "INVESTIGATE", [x["evidence"] for x in fraud_result.get("inconsistencies", [])]
+    fraud_reasons = [x["evidence"] for x in fraud_result.get("inconsistencies", [])]
+    if status == "excluded": decision, reasons = "REJECT", [policy_result.get("explanation", "Une exclusion contractuelle explicite s'applique.")]
+    elif status == "insufficient_information": decision, reasons = "INVESTIGATE", [policy_result.get("explanation", "La couverture ne peut pas être confirmée."), "Les Conditions particulières et les garanties souscrites doivent être vérifiées.", *fraud_reasons]
+    elif risk: decision, reasons = "INVESTIGATE", fraud_reasons
     else: decision, reasons = "ACCEPT", ["Une garantie applicable a été retrouvée.", "Aucune incohérence majeure n'a été détectée."]
     return {"agent": "decision", "decision": decision, "confidence": confidence, "risk_score": risk, "reasons": reasons, "policy_references": policy_result.get("references", []), "confidence_breakdown": {"base": 0.95, "penalties": penalties, "formula": "max(0.45, min(0.95, base - somme des pénalités))", "result": confidence}}

@@ -52,7 +52,7 @@
       "position": [720, 260]
     },
     {
-      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/fraud/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ document: $('Document Agent').item.json, vision: $('Vision Agent').item.json, policy: $('Policy RAG Agent').item.json }) }}", "options": {}},
+      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/fraud/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id, document: $('Document Agent').item.json, vision: $('Vision Agent').item.json, policy: $('Policy RAG Agent').item.json }) }}", "options": {}},
       "id": "fraud",
       "name": "Fraud Agent",
       "type": "n8n-nodes-base.httpRequest",
@@ -60,7 +60,7 @@
       "position": [940, 260]
     },
     {
-      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/decision/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ document: $('Document Agent').item.json, vision: $('Vision Agent').item.json, policy: $('Policy RAG Agent').item.json, fraud: $('Fraud Agent').item.json }) }}", "options": {}},
+      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/decision/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id, document: $('Document Agent').item.json, vision: $('Vision Agent').item.json, policy: $('Policy RAG Agent').item.json, fraud: $('Fraud Agent').item.json }) }}", "options": {}},
       "id": "decision",
       "name": "Decision Agent",
       "type": "n8n-nodes-base.httpRequest",

@@ -25,6 +25,10 @@ Le workflow `n8n/ai-claims-workflow.json` est importé et publié automatiquemen
 
 L'API Django est disponible sur `http://localhost:8000/api/`.
 
+## Email de transmission des dossiers
+
+Quand un dossier « À examiner » est transmis à un responsable depuis React, Django lui envoie automatiquement un email récapitulatif avec les pièces jointes (jusqu'à 20 Mo au total). Configure un compte SMTP expéditeur dans `.env` avant de transmettre : `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS`, `EMAIL_USE_SSL` et `DEFAULT_FROM_EMAIL`. Pour Gmail, utilise un mot de passe d'application, pas le mot de passe normal. Après modification de `.env`, redémarre avec `docker compose up -d backend`. L'état de l'envoi apparaît dans le dossier et l'email peut être renvoyé depuis la fiche.
+
 ## Parcours de démonstration
 
 1. Créer un dossier depuis React.

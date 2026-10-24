@@ -1,14 +1,16 @@
 from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from datetime import datetime
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
 from .agents import POLICY_CORPUS, document_agent, vision_agent, policy_agent, fraud_agent, decision_agent
-from .models import Claim, ClaimDocument
-from .serializers import ClaimSerializer
-from .services import trigger_n8n
+from .models import Claim, ClaimDocument, InsuranceContact
+from .serializers import ClaimSerializer, InsuranceContactSerializer
+from .services import send_claim_handoff_email, trigger_n8n
 
 
 @api_view(["GET"])
@@ -70,7 +72,7 @@ def system_info(request):
 
 
 class ClaimViewSet(viewsets.ModelViewSet):
-    queryset = Claim.objects.prefetch_related("documents").order_by("-created_at")
+    queryset = Claim.objects.select_related("assigned_contact").prefetch_related("documents").order_by("-created_at")
     serializer_class = ClaimSerializer
     http_method_names = ["get", "post"]
 
@@ -95,6 +97,27 @@ class ClaimViewSet(viewsets.ModelViewSet):
             claim.status = Claim.Status.FAILED
             claim.error_message = str(exc)
             claim.save(update_fields=["status", "error_message", "updated_at"])
+        return Response(ClaimSerializer(claim, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"], url_path="handoff")
+    def handoff(self, request, pk=None):
+        claim = self.get_object()
+        if claim.decision != Claim.Decision.INVESTIGATE:
+            return Response({"detail": "Seuls les dossiers À examiner peuvent être transmis."}, status=status.HTTP_400_BAD_REQUEST)
+        contact = get_object_or_404(InsuranceContact, id=request.data.get("contact_id"), is_active=True)
+        claim.assigned_contact = contact
+        claim.handoff_at = timezone.now()
+        claim.handoff_note = str(request.data.get("note", "")).strip()
+        claim.save(update_fields=["assigned_contact", "handoff_at", "handoff_note", "updated_at"])
+        _send_handoff_email(claim)
+        return Response(ClaimSerializer(claim, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"], url_path="notify-responsible")
+    def notify_responsible(self, request, pk=None):
+        claim = self.get_object()
+        if not claim.assigned_contact:
+            return Response({"detail": "Attribue d’abord ce dossier à un responsable."}, status=status.HTTP_400_BAD_REQUEST)
+        _send_handoff_email(claim)
         return Response(ClaimSerializer(claim, context={"request": request}).data)
 
     @action(detail=True, methods=["post"], url_path="add-files")
@@ -142,6 +165,12 @@ class ClaimViewSet(viewsets.ModelViewSet):
             claim.risk_score = None
             claim.reasons = []
             claim.policy_references = []
+            claim.assigned_contact = None
+            claim.handoff_at = None
+            claim.handoff_note = ""
+            claim.handoff_email_status = ""
+            claim.handoff_email_sent_at = None
+            claim.handoff_email_error = ""
             claim.agent_results = {"history": history}
             claim.error_message = ""
             claim.save()
@@ -156,6 +185,20 @@ class ClaimViewSet(viewsets.ModelViewSet):
         return Response(ClaimSerializer(claim, context={"request": request}).data)
 
 
+class InsuranceContactViewSet(viewsets.ModelViewSet):
+    queryset = InsuranceContact.objects.all()
+    serializer_class = InsuranceContactSerializer
+    http_method_names = ["get", "post", "patch", "delete"]
+
+
+def _send_handoff_email(claim):
+    result, error, sent_at = send_claim_handoff_email(claim)
+    claim.handoff_email_status = result
+    claim.handoff_email_error = error
+    claim.handoff_email_sent_at = sent_at
+    claim.save(update_fields=["handoff_email_status", "handoff_email_error", "handoff_email_sent_at", "updated_at"])
+
+
 @api_view(["GET"])
 def internal_claim(request, claim_id):
     claim = get_object_or_404(Claim.objects.prefetch_related("documents"), id=claim_id)
@@ -165,38 +208,83 @@ def internal_claim(request, claim_id):
 @api_view(["POST"])
 def run_document_agent(request):
     claim = get_object_or_404(Claim, id=request.data.get("claim_id"))
-    return Response(document_agent(claim))
+    result = _execute_agent(claim.id, "document", document_agent, claim)
+    return Response(result)
 
 
 @api_view(["POST"])
 def run_vision_agent(request):
     claim = get_object_or_404(Claim, id=request.data.get("claim_id"))
-    return Response(vision_agent(claim))
+    result = _execute_agent(claim.id, "vision", vision_agent, claim)
+    return Response(result)
 
 
 @api_view(["POST"])
 def run_policy_agent(request):
     claim = get_object_or_404(Claim, id=request.data.get("claim_id"))
-    return Response(policy_agent(claim))
+    result = _execute_agent(claim.id, "policy", policy_agent, claim)
+    return Response(result)
 
 
 @api_view(["POST"])
 def run_fraud_agent(request):
-    return Response(fraud_agent(
+    claim_id = request.data.get("claim_id")
+    result = _execute_agent(claim_id, "fraud", fraud_agent,
         request.data.get("document", {}),
         request.data.get("vision", {}),
         request.data.get("policy", {}),
-    ))
+    )
+    return Response(result)
 
 
 @api_view(["POST"])
 def run_decision_agent(request):
-    return Response(decision_agent(
+    claim_id = request.data.get("claim_id")
+    result = _execute_agent(claim_id, "decision", decision_agent,
         request.data.get("document", {}),
         request.data.get("vision", {}),
         request.data.get("policy", {}),
         request.data.get("fraud", {}),
-    ))
+    )
+    return Response(result)
+
+
+def _execute_agent(claim_id, agent_key, callback, *args):
+    _mark_agent(claim_id, agent_key, "RUNNING")
+    try:
+        result = callback(*args)
+    except Exception:
+        _mark_agent(claim_id, agent_key, "FAILED")
+        raise
+    _mark_agent(claim_id, agent_key, "COMPLETED", result)
+    return result
+
+
+def _mark_agent(claim_id, agent_key, agent_status, result=None):
+    if not claim_id:
+        return
+    with transaction.atomic():
+        claim = Claim.objects.select_for_update().filter(id=claim_id).first()
+        if not claim:
+            return
+        results = claim.agent_results if isinstance(claim.agent_results, dict) else {}
+        timeline = results.setdefault("timeline", {"started_at": timezone.now().isoformat(), "agents": {}})
+        agents = timeline.setdefault("agents", {})
+        entry = agents.setdefault(agent_key, {"status": "PENDING", "expected_seconds": 60})
+        now = timezone.now()
+        if agent_status == "RUNNING":
+            entry["status"] = "RUNNING"
+            entry["started_at"] = now.isoformat()
+        else:
+            entry["status"] = agent_status
+            entry["completed_at"] = now.isoformat()
+            if entry.get("started_at"):
+                started = datetime.fromisoformat(entry["started_at"])
+                entry["elapsed_seconds"] = max(0, round((now - started).total_seconds()))
+            if result is not None:
+                results[agent_key] = result
+        claim.agent_results = results
+        claim.save(update_fields=["agent_results", "updated_at"])
 
 
 @api_view(["POST"])
@@ -213,6 +301,15 @@ def complete_claim(request, claim_id):
     claim.policy_references = decision.get("policy_references", [])
     history = claim.agent_results.get("history", []) if isinstance(claim.agent_results, dict) else []
     claim.agent_results = request.data.get("agent_results", {})
+    if not isinstance(claim.agent_results, dict):
+        claim.agent_results = {}
+    timeline = claim.agent_results.get("timeline")
+    if timeline is None and isinstance(request.data.get("timeline"), dict):
+        timeline = request.data["timeline"]
+    if timeline is None:
+        timeline = Claim.objects.filter(id=claim.id).values_list("agent_results", flat=True).first()
+        timeline = timeline.get("timeline", {}) if isinstance(timeline, dict) else {}
+    claim.agent_results["timeline"] = timeline
     claim.agent_results["history"] = history
     claim.agent_results["decision"] = decision
     claim.error_message = ""

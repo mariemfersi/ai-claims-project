@@ -2,7 +2,7 @@ from datetime import date
 from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
-from .agents import document_agent, policy_agent, fraud_agent, decision_agent
+from .agents import _normalize_policy_payload, _normalize_vision_analysis, document_agent, policy_agent, fraud_agent, decision_agent
 from .models import Claim, ClaimDocument
 
 
@@ -24,8 +24,54 @@ class AgentPipelineTests(TestCase):
         policy = policy_agent(self.claim)
         fraud = fraud_agent(document, vision, policy)
         decision = decision_agent(document, vision, policy, fraud)
-        self.assertEqual(decision["decision"], "REJECT")
+        self.assertEqual(decision["decision"], "INVESTIGATE")
+        self.assertEqual(policy["coverage_status"], "insufficient_information")
         self.assertEqual(policy["references"][0]["insurer"], "AXA France")
+
+    def test_decision_rejects_only_an_explicit_exclusion(self):
+        document = {"missing_documents": []}
+        vision = {"visible_damage": True}
+        fraud = {"risk_score": 0, "inconsistencies": []}
+        excluded = {"coverage_status": "excluded", "explanation": "Exclusion explicite.", "references": []}
+        covered = {"coverage_status": "covered", "explanation": "Garantie confirmée.", "references": []}
+        self.assertEqual(decision_agent(document, vision, excluded, fraud)["decision"], "REJECT")
+        self.assertEqual(decision_agent(document, vision, covered, fraud)["decision"], "ACCEPT")
+
+    def test_policy_payload_normalizes_local_llm_variations(self):
+        normalized = _normalize_policy_payload({
+            "coverage_status": "inconnu",
+            "applicable_articles": [{"page": 34}],
+            "explanation": ["Conditions particulières", "requises"],
+            "missing_information": "Garanties souscrites",
+            "confidence": 75,
+        })
+        self.assertEqual(normalized["coverage_status"], "insufficient_information")
+        self.assertEqual(normalized["applicable_articles"], ["Page 34"])
+        self.assertEqual(normalized["confidence"], 0.75)
+
+    def test_vision_area_is_recovered_from_observations(self):
+        normalized = _normalize_vision_analysis({
+            "visible_damage": True,
+            "damaged_areas": [],
+            "observations": ["Damage to the rear end, trunk and taillight."],
+        })
+        self.assertEqual(normalized["damaged_areas"], ["rear"])
+
+    def test_fraud_detects_bidirectional_damage_mismatch(self):
+        policy = {"coverage_status": "covered"}
+        rear_declaration = {"claim_facts": {"description": "Choc à l'arrière"}, "missing_documents": []}
+        front_declaration = {"claim_facts": {"description": "Choc frontal à l'avant"}, "missing_documents": []}
+        self.assertEqual(fraud_agent(rear_declaration, {"damaged_areas": ["front"]}, policy)["risk_score"], 50)
+        self.assertEqual(fraud_agent(front_declaration, {"damaged_areas": ["rear"]}, policy)["risk_score"], 50)
+
+    def test_decision_includes_fraud_evidence_when_coverage_is_unknown(self):
+        document = {"missing_documents": []}
+        vision = {"visible_damage": True}
+        policy = {"coverage_status": "insufficient_information", "explanation": "Contrat à vérifier.", "references": []}
+        fraud = {"risk_score": 50, "inconsistencies": [{"evidence": "Zones contradictoires."}]}
+        result = decision_agent(document, vision, policy, fraud)
+        self.assertEqual(result["decision"], "INVESTIGATE")
+        self.assertIn("Zones contradictoires.", result["reasons"])
 
     @override_settings(N8N_WEBHOOK_URL="")
     def test_api_creates_claim(self):

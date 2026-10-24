@@ -1,5 +1,14 @@
 from rest_framework import serializers
-from .models import Claim, ClaimDocument
+from .models import Claim, ClaimDocument, InsuranceContact
+
+
+class InsuranceContactSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True, allow_blank=False)
+
+    class Meta:
+        model = InsuranceContact
+        fields = ["id", "name", "role", "insurer", "email", "phone", "is_active", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
 
 class ClaimDocumentSerializer(serializers.ModelSerializer):
@@ -11,6 +20,7 @@ class ClaimDocumentSerializer(serializers.ModelSerializer):
 
 class ClaimSerializer(serializers.ModelSerializer):
     documents = ClaimDocumentSerializer(many=True, read_only=True)
+    assigned_contact = InsuranceContactSerializer(read_only=True)
     files = serializers.ListField(
         child=serializers.FileField(), write_only=True, required=False
     )
@@ -21,11 +31,15 @@ class ClaimSerializer(serializers.ModelSerializer):
             "id", "customer_name", "policy_number", "description", "incident_date",
             "location", "status", "decision", "confidence", "risk_score", "reasons",
             "policy_references", "agent_results", "error_message", "documents", "files",
+            "assigned_contact", "handoff_at", "handoff_note", "handoff_email_status",
+            "handoff_email_sent_at", "handoff_email_error",
             "created_at", "updated_at",
         ]
         read_only_fields = [
             "id", "status", "decision", "confidence", "risk_score", "reasons",
-            "policy_references", "agent_results", "error_message", "created_at", "updated_at",
+            "policy_references", "agent_results", "error_message", "assigned_contact",
+            "handoff_at", "handoff_note", "handoff_email_status", "handoff_email_sent_at",
+            "handoff_email_error", "created_at", "updated_at",
         ]
 
     def create(self, validated_data):

@@ -12,6 +12,34 @@ export async function listClaims() {
   return parseResponse(await fetch(`${API_URL}/claims/`));
 }
 
+export async function listContacts() {
+  return parseResponse(await fetch(`${API_URL}/contacts/`));
+}
+
+export async function createContact(values) {
+  return parseResponse(await fetch(`${API_URL}/contacts/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(values),
+  }));
+}
+
+export async function deleteContact(id) {
+  return parseResponse(await fetch(`${API_URL}/contacts/${id}/`, { method: "DELETE" }));
+}
+
+export async function assignClaim(id, contactId, note) {
+  return parseResponse(await fetch(`${API_URL}/claims/${id}/handoff/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contact_id: contactId, note }),
+  }));
+}
+
+export async function notifyResponsible(id) {
+  return parseResponse(await fetch(`${API_URL}/claims/${id}/notify-responsible/`, { method: "POST" }));
+}
+
 export async function getClaim(id) {
   return parseResponse(await fetch(`${API_URL}/claims/${id}/`));
 }

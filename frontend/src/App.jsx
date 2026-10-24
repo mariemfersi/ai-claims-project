@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, Bot, BrainCircuit, Calculator, CheckCircle2, ChevronRight,
-  Database, FileSearch, Gauge, GitBranch, Image, LayoutDashboard,
-  LoaderCircle, Plus, RefreshCw, ShieldCheck, Upload, XCircle,
+  AlertTriangle, Bot, BrainCircuit, Calculator, CheckCircle2, ChevronRight, Clock3,
+  Database, FileSearch, FileText, Gauge, GitBranch, Headphones, Image, LayoutDashboard,
+  LoaderCircle, Mail, Phone, Plus, RefreshCw, ShieldCheck, Trash2, Upload, Users, XCircle,
 } from "lucide-react";
-import { createClaim, getClaim, getSystemInfo, listClaims, retryClaim, updateClaimFiles } from "./api";
+import { assignClaim, createClaim, createContact, deleteContact, getClaim, getSystemInfo, listClaims, listContacts, notifyResponsible, retryClaim, updateClaimFiles } from "./api";
 
 const EMPTY_FORM = {
   customer_name: "",
@@ -39,6 +39,7 @@ function App() {
   const [systemInfo, setSystemInfo] = useState(null);
   const [supplementClaim, setSupplementClaim] = useState(null);
   const [supplementFiles, setSupplementFiles] = useState([]);
+  const [contacts, setContacts] = useState([]);
 
   async function refreshClaims() {
     try {
@@ -51,22 +52,27 @@ function App() {
 
   useEffect(() => {
     refreshClaims();
+    listContacts().then(setContacts).catch((err) => setError(err.message));
     getSystemInfo().then(setSystemInfo).catch((err) => setError(err.message));
   }, []);
 
+  const pollTargetId = selected && ["SUBMITTED", "PROCESSING"].includes(selected.status)
+    ? selected.id
+    : view === "trace" ? claims.find((item) => ["SUBMITTED", "PROCESSING"].includes(item.status))?.id : null;
+
   useEffect(() => {
-    if (!selected || !["SUBMITTED", "PROCESSING"].includes(selected.status)) return;
+    if (!pollTargetId) return;
     const timer = setInterval(async () => {
       try {
-        const updated = await getClaim(selected.id);
-        setSelected(updated);
+        const updated = await getClaim(pollTargetId);
+        setSelected((current) => current?.id === updated.id || (view === "trace" && !current) ? updated : current);
         setClaims((current) => current.map((item) => item.id === updated.id ? updated : item));
       } catch (err) {
         setError(err.message);
       }
     }, 2500);
     return () => clearInterval(timer);
-  }, [selected?.id, selected?.status]);
+  }, [pollTargetId, view]);
 
   async function submit(event) {
     event.preventDefault();
@@ -103,6 +109,59 @@ function App() {
     }
   }
 
+  async function submitContact(values) {
+    try {
+      const created = await createContact(values);
+      setContacts((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
+  async function removeContact(contact) {
+    const hasAssignedClaims = claims.some((claim) => String(claim.assigned_contact?.id) === String(contact.id));
+    const impact = hasAssignedClaims
+      ? " Les dossiers déjà attribués resteront, mais leur attribution à ce contact sera retirée."
+      : "";
+    if (!window.confirm(`Supprimer ${contact.name} du répertoire ?${impact}`)) return;
+    try {
+      await deleteContact(contact.id);
+      setContacts((current) => current.filter((item) => String(item.id) !== String(contact.id)));
+      const unassign = (claim) => String(claim.assigned_contact?.id) === String(contact.id)
+        ? { ...claim, assigned_contact: null }
+        : claim;
+      setClaims((current) => current.map(unassign));
+      setSelected((current) => current ? unassign(current) : current);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function handoffClaim(claimId, contactId, note) {
+    try {
+      const updated = await assignClaim(claimId, contactId, note);
+      setSelected(updated);
+      setClaims((current) => current.map((item) => item.id === updated.id ? updated : item));
+      return updated;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
+  async function resendHandoffEmail(claimId) {
+    try {
+      const updated = await notifyResponsible(claimId);
+      setSelected(updated);
+      setClaims((current) => current.map((item) => item.id === updated.id ? updated : item));
+      return updated;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
   const metrics = useMemo(() => ({
     total: claims.length,
     processing: claims.filter((x) => ["SUBMITTED", "PROCESSING"].includes(x.status)).length,
@@ -121,6 +180,7 @@ function App() {
           <nav className="view-switcher">
             <button className={view === "dashboard" ? "active" : ""} onClick={() => setView("dashboard")}><LayoutDashboard size={17} /> Dossiers</button>
             <button className={view === "trace" ? "active" : ""} onClick={() => setView("trace")}><GitBranch size={17} /> Traçabilité</button>
+            <button className={view === "contacts" ? "active" : ""} onClick={() => setView("contacts")}><Users size={17} /> Contacts</button>
           </nav>
           <button className="primary" onClick={() => setShowForm(true)}><Plus size={18} /> Nouveau sinistre</button>
         </div>
@@ -160,10 +220,10 @@ function App() {
             </div>
           </div>
           <div className="detail-panel">
-            {selected ? <ClaimDetail claim={selected} onRetry={async () => setSelected(await retryClaim(selected.id))} onAddFiles={() => setSupplementClaim(selected)} /> : <div className="empty detail-empty"><Bot size={38} /><h3>Sélectionnez un dossier</h3><p>La décision et les preuves apparaîtront ici.</p></div>}
+            {selected ? <ClaimDetail claim={selected} contacts={contacts} onHandoff={handoffClaim} onNotify={resendHandoffEmail} onRetry={async () => setSelected(await retryClaim(selected.id))} onAddFiles={() => setSupplementClaim(selected)} /> : <div className="empty detail-empty"><Bot size={38} /><h3>Sélectionnez un dossier</h3><p>La décision et les preuves apparaîtront ici.</p></div>}
           </div>
         </section>
-        </> : <TracePage systemInfo={systemInfo} claims={claims} selected={selected} setSelected={setSelected} />}
+        </> : view === "trace" ? <TracePage systemInfo={systemInfo} claims={claims} selected={selected} setSelected={setSelected} /> : <ContactsPage contacts={contacts} claims={claims} onCreateContact={submitContact} onDeleteContact={removeContact} onSelectClaim={(claim) => { setSelected(claim); setView("dashboard"); }} />}
       </main>
 
       {showForm && <ClaimModal form={form} setForm={setForm} files={files} setFiles={setFiles} busy={busy} onSubmit={submit} onClose={() => setShowForm(false)} />}
@@ -173,8 +233,9 @@ function App() {
 }
 
 function TracePage({ systemInfo, claims, selected, setSelected }) {
-  const completed = selected?.status === "COMPLETED" ? selected : claims.find((item) => item.status === "COMPLETED");
-  const results = completed?.agent_results || {};
+  const observed = selected || claims.find((item) => item.status === "PROCESSING" || item.status === "SUBMITTED") || claims.find((item) => item.status === "COMPLETED");
+  const timeline = observed?.agent_results?.timeline;
+  const results = observed?.agent_results || {};
   const decisionResult = results.decision || {};
   const fraud = results.fraud || {};
 
@@ -188,25 +249,28 @@ function TracePage({ systemInfo, claims, selected, setSelected }) {
 
     <section className="trace-selector">
       <label>Dossier observé
-        <select value={completed?.id || ""} onChange={(e) => setSelected(claims.find((item) => item.id === e.target.value))}>
+        <select value={observed?.id || ""} onChange={(e) => setSelected(claims.find((item) => item.id === e.target.value) || null)}>
           <option value="">Architecture générale</option>
           {claims.map((claim) => <option key={claim.id} value={claim.id}>{claim.customer_name} · {claim.status}</option>)}
         </select>
       </label>
-      {completed && <div className="trace-summary"><span>Décision</span><strong>{completed.decision}</strong><span>Risque</span><strong>{completed.risk_score}/100</strong><span>Confiance</span><strong>{Math.round((completed.confidence || 0) * 100)}%</strong></div>}
+      {observed && (observed.status === "COMPLETED" ? <div className="trace-summary"><span>Décision</span><strong>{observed.decision}</strong><span>Risque</span><strong>{observed.risk_score}/100</strong><span>Confiance</span><strong>{Math.round((observed.confidence || 0) * 100)}%</strong></div> : <div className="trace-summary"><span>État</span><strong>{statusLabels[observed.status]}</strong></div>)}
     </section>
 
     <section className="timeline-section">
-      <div className="trace-title"><GitBranch /><div><h2>Timeline des agents</h2><p>Les trois premiers agents s'exécutent en parallèle, puis leurs résultats sont fusionnés.</p></div></div>
+      <div className="trace-title"><GitBranch /><div><h2>Timeline des agents</h2><p>Les trois premiers agents s'exécutent en parallèle, puis leurs résultats sont fusionnés. Les durées restantes sont estimatives.</p></div></div>
+      {timeline && <WorkflowProgress timeline={timeline} />}
       <div className="timeline">
         <div className="parallel-group">
           <span className="phase-label">Phase 1 · Parallèle</span>
-          <div className="parallel-agents">{systemInfo.agents.filter((a) => a.order === 1).map((agent) => <AgentCard key={agent.key} agent={agent} result={results[agent.key]} />)}</div>
+          <div className="parallel-agents">{systemInfo.agents.filter((a) => a.order === 1).map((agent) => <AgentCard key={agent.key} agent={agent} result={results[agent.key]} progress={timeline?.agents?.[agent.key]} />)}</div>
         </div>
         <div className="timeline-arrow">↓ Fusion des résultats</div>
-        {systemInfo.agents.filter((a) => a.order > 1).map((agent) => <div key={agent.key} className="sequential-step"><span className="phase-label">Phase {agent.order} · Séquentielle</span><AgentCard agent={agent} result={agent.key === "decision" ? decisionResult : results[agent.key]} /></div>)}
+        {systemInfo.agents.filter((a) => a.order > 1).map((agent) => <div key={agent.key} className="sequential-step"><span className="phase-label">Phase {agent.order} · Séquentielle</span><AgentCard agent={agent} result={agent.key === "decision" ? decisionResult : results[agent.key]} progress={timeline?.agents?.[agent.key]} /></div>)}
       </div>
     </section>
+
+    {observed && <section className="attachments-section"><div className="trace-title"><FileText /><div><h2>Pièces de ce dossier</h2><p>Fichiers transmis avec la déclaration de {observed.customer_name}.</p></div></div><ClaimAttachments documents={observed.documents || []} /></section>}
 
     <section className="trace-grid">
       <article className="explain-card rag-card">
@@ -221,7 +285,7 @@ function TracePage({ systemInfo, claims, selected, setSelected }) {
         <div className="trace-title"><Calculator /><div><h2>Calcul du score de risque</h2><p>{systemInfo.risk.formula}</p></div></div>
         <div className="formula">Risque = min(100, Σ points)</div>
         <div className="rule-list">{systemInfo.risk.rules.map((rule) => <div key={rule.key}><span>{rule.label}</span><strong>+{rule.points}</strong></div>)}</div>
-        <div className="calculation-result"><Gauge /><div><span>Calcul de ce dossier</span>{fraud.score_breakdown?.length ? fraud.score_breakdown.map((item) => <p key={item.rule}>+{item.points} · {item.evidence}</p>) : <p>Aucune incohérence détectée : +0</p>}<strong>Total : {completed?.risk_score ?? 0}/100</strong></div></div>
+        <div className="calculation-result"><Gauge /><div><span>Calcul de ce dossier</span>{fraud.score_breakdown?.length ? fraud.score_breakdown.map((item) => <p key={item.rule}>+{item.points} · {item.evidence}</p>) : <p>Aucune incohérence détectée : +0</p>}<strong>Total : {observed?.risk_score ?? 0}/100</strong></div></div>
       </article>
 
       <article className="explain-card">
@@ -234,12 +298,62 @@ function TracePage({ systemInfo, claims, selected, setSelected }) {
   </div>;
 }
 
-function AgentCard({ agent, result }) {
+function AgentCard({ agent, result, progress }) {
+  const running = progress?.status === "RUNNING";
+  const completed = progress?.status === "COMPLETED" || Boolean(result);
+  const failed = progress?.status === "FAILED";
+  const label = running ? "En cours" : completed ? "Terminé" : failed ? "Échec" : "En attente";
   return <article className={`agent-card ${result ? "has-result" : ""}`}>
-    <div className="agent-card-head"><span className="agent-icon"><Bot /></span><div><h3>{agent.name}</h3><span>{result ? "Exécuté" : agent.status}</span></div></div>
+    <div className="agent-card-head"><span className="agent-icon">{running ? <LoaderCircle className="spin" /> : <Bot />}</span><div><h3>{agent.name}</h3><span className={running ? "agent-running" : failed ? "agent-failed" : ""}>{progress ? label : agent.status}</span></div></div>
+    {progress && <AgentProgress progress={progress} />}
     <dl><div><dt>Moteur actuel</dt><dd>{agent.engine}</dd></div><div><dt>LLM</dt><dd>{agent.llm || "Aucun LLM dans le MVP"}</dd></div><div><dt>Entrée</dt><dd>{agent.input}</dd></div><div><dt>Sortie</dt><dd>{agent.output}</dd></div></dl>
     {result && <details><summary>Voir la sortie JSON</summary><pre>{JSON.stringify(result, null, 2)}</pre></details>}
   </article>;
+}
+
+function WorkflowProgress({ timeline }) {
+  const agents = timeline.agents || {};
+  const entries = Object.values(agents);
+  const pending = entries.filter((item) => item.status === "PENDING").length;
+  const running = entries.filter((item) => item.status === "RUNNING").length;
+  const done = entries.filter((item) => item.status === "COMPLETED").length;
+  const remaining = (item = {}) => {
+    if (["COMPLETED", "FAILED"].includes(item.status)) return 0;
+    if (item.status === "RUNNING" && item.started_at) return Math.max(0, (item.expected_seconds || 60) - Math.floor((Date.now() - new Date(item.started_at).getTime()) / 1000));
+    return item.expected_seconds || 60;
+  };
+  const parallelEta = Math.max(remaining(agents.document), remaining(agents.vision), remaining(agents.policy));
+  const sequentialEta = remaining(agents.fraud) + remaining(agents.decision);
+  const parallelDone = ["document", "vision", "policy"].every((key) => ["COMPLETED", "FAILED"].includes(agents[key]?.status));
+  const etaSeconds = (parallelDone ? 0 : parallelEta) + sequentialEta;
+  return <div className="workflow-progress">
+    <div><strong>{running ? `${running} agent(s) en cours` : done === entries.length && entries.length ? "Analyse terminée" : "Workflow en préparation"}</strong><span>{done}/{entries.length} terminés · {pending} en attente</span></div>
+    <div className="workflow-eta"><Clock3 size={16} />Temps restant estimé : ~{formatDuration(etaSeconds)}</div>
+    <small>Estimation indicative selon la durée prévue de chaque étape. Le temps réel dépend des fichiers et de la vitesse d’Ollama.</small>
+  </div>;
+}
+
+function AgentProgress({ progress }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (progress.status !== "RUNNING") return undefined;
+    const timer = setInterval(() => setTick((value) => value + 1), 1000);
+    return () => clearInterval(timer);
+  }, [progress.status, progress.started_at]);
+  const elapsed = progress.status === "COMPLETED" || progress.status === "FAILED"
+    ? progress.elapsed_seconds || 0
+    : progress.started_at ? Math.max(0, Math.floor((Date.now() - new Date(progress.started_at).getTime()) / 1000)) : 0;
+  const remaining = Math.max(0, (progress.expected_seconds || 60) - elapsed);
+  return <div className={`agent-progress ${progress.status?.toLowerCase() || "pending"}`}>
+    <div className="agent-progress-meta"><span>{progress.status === "RUNNING" ? `En cours · ${formatDuration(elapsed)} écoulées` : progress.status === "COMPLETED" ? `Terminé en ${formatDuration(elapsed)}` : progress.status === "FAILED" ? `Échec après ${formatDuration(elapsed)}` : "En attente"}</span><span>{progress.status === "RUNNING" ? `reste ~${formatDuration(remaining)}` : `prévu ~${formatDuration(progress.expected_seconds || 60)}`}</span></div>
+    <div className="agent-progress-track"><span style={{ width: progress.status === "COMPLETED" ? "100%" : progress.status === "RUNNING" ? `${Math.min(94, Math.max(8, elapsed / (progress.expected_seconds || 60) * 100))}%` : "0%" }} /></div>
+  </div>;
+}
+
+function formatDuration(seconds) {
+  const safe = Math.max(0, Math.floor(seconds || 0));
+  if (safe < 60) return `${safe}s`;
+  return `${Math.floor(safe / 60)} min ${String(safe % 60).padStart(2, "0")}s`;
 }
 
 function Metric({ label, value, tone = "neutral" }) {
@@ -256,9 +370,31 @@ function ClaimRow({ claim, active, onClick }) {
   </button>;
 }
 
-function ClaimDetail({ claim, onRetry, onAddFiles }) {
+function ClaimDetail({ claim, contacts, onRetry, onAddFiles, onHandoff, onNotify }) {
   const info = decisionInfo[claim.decision];
   const Icon = info?.icon || LoaderCircle;
+  const [contactId, setContactId] = useState(claim.assigned_contact?.id || "");
+  const [handoffNote, setHandoffNote] = useState(claim.handoff_note || "");
+  const [handoffBusy, setHandoffBusy] = useState(false);
+  const [handoffMessage, setHandoffMessage] = useState("");
+  useEffect(() => {
+    setContactId(claim.assigned_contact?.id || "");
+    setHandoffNote(claim.handoff_note || "");
+  }, [claim.id, claim.assigned_contact?.id, claim.handoff_note]);
+  async function submitHandoff(event) {
+    event.preventDefault();
+    if (!contactId) return;
+    setHandoffBusy(true);
+    setHandoffMessage("");
+    try {
+      const updated = await onHandoff(claim.id, contactId, handoffNote);
+      setHandoffMessage(updated.handoff_email_status === "SENT" ? `Dossier transmis et email envoyé à ${updated.assigned_contact.email}.` : `Dossier attribué, mais email non envoyé : ${updated.handoff_email_error || "configuration email manquante."}`);
+    } catch (err) {
+      setHandoffMessage(err.message);
+    } finally {
+      setHandoffBusy(false);
+    }
+  }
   return <div className="detail-content">
     <div className="detail-heading">
       <div><span className="claim-id">DOSSIER #{claim.id.slice(0, 8).toUpperCase()}</span><h2>{claim.customer_name}</h2><p>{claim.policy_number} · {claim.location}</p></div>
@@ -266,13 +402,88 @@ function ClaimDetail({ claim, onRetry, onAddFiles }) {
     </div>
     <div className="description"><span>Déclaration</span><p>{claim.description}</p></div>
     {claim.status === "FAILED" && <div className="failure"><p>{claim.error_message}</p><button className="secondary" onClick={onRetry}>Relancer n8n</button></div>}
-    {["SUBMITTED", "PROCESSING"].includes(claim.status) && <div className="processing-card"><LoaderCircle className="spin" /><div><strong>Analyse automatique en cours</strong><p>n8n coordonne les agents spécialisés.</p></div></div>}
+    {["SUBMITTED", "PROCESSING"].includes(claim.status) && <div className="processing-card"><LoaderCircle className="spin" /><div className="processing-content"><strong>Analyse automatique en cours</strong><p>n8n coordonne les agents spécialisés.</p>{claim.agent_results?.timeline && <WorkflowProgress timeline={claim.agent_results.timeline} />}</div></div>}
+    <ClaimAttachments documents={claim.documents || []} />
     {claim.status === "COMPLETED" && <>
       <div className="score-grid"><div><span>Confiance</span><strong>{Math.round((claim.confidence || 0) * 100)}%</strong></div><div><span>Score de risque</span><strong>{claim.risk_score ?? 0}/100</strong></div><div><span>Documents</span><strong>{claim.documents.length}</strong></div></div>
       <section className="evidence"><h3>Justification</h3>{claim.reasons.map((reason, index) => <p key={index}><CheckCircle2 size={17} />{reason}</p>)}</section>
-      <section className="evidence"><h3>Références du contrat</h3>{claim.policy_references.length ? claim.policy_references.map((ref, index) => <p key={index}><ShieldCheck size={17} />Page {ref.page || "?"} · {ref.section || ref.source} · {ref.text}</p>) : <p>Aucune référence retournée.</p>}</section>
+      <section className="evidence contract-evidence"><h3>Références du contrat</h3>{claim.policy_references.length ? claim.policy_references.map((ref, index) => <details key={index}><summary><ShieldCheck size={17} />Page {ref.page || "?"} · {ref.section || ref.source}</summary><p>{ref.text}</p></details>) : <p>Aucune référence retournée.</p>}</section>
     </>}
+    {claim.status === "COMPLETED" && claim.decision === "INVESTIGATE" && <section className="handoff-section">
+      <div className="handoff-heading"><Users /><div><h3>Transmettre à un responsable</h3><p>Le responsable retrouvera ce dossier dans la page Contacts, avec ses pièces et l’analyse.</p></div></div>
+      {claim.assigned_contact && <div className="assigned-contact"><CheckCircle2 size={17} /><span>Attribué à <strong>{claim.assigned_contact.name}</strong> · {claim.handoff_at ? new Date(claim.handoff_at).toLocaleString("fr-TN") : ""}<small className={`email-state ${claim.handoff_email_status?.toLowerCase() || ""}`}>{claim.handoff_email_status === "SENT" ? `Email envoyé${claim.handoff_email_sent_at ? ` le ${new Date(claim.handoff_email_sent_at).toLocaleString("fr-TN")}` : ""}` : claim.handoff_email_status === "FAILED" ? `Échec email : ${claim.handoff_email_error}` : claim.handoff_email_status === "NOT_CONFIGURED" ? claim.handoff_email_error : "Email pas encore envoyé"}</small></span></div>}
+      {contacts.length ? <form onSubmit={submitHandoff} className="handoff-form">
+        <label>Responsable<select value={contactId} onChange={(event) => setContactId(event.target.value)} required><option value="">Choisir un contact</option>{contacts.filter((contact) => contact.is_active).map((contact) => <option key={contact.id} value={contact.id}>{contact.name} · {contact.role}{contact.insurer ? ` — ${contact.insurer}` : ""}</option>)}</select></label>
+        <label>Note de transmission<textarea rows="2" value={handoffNote} onChange={(event) => setHandoffNote(event.target.value)} placeholder="Pourquoi ce dossier nécessite une vérification…" /></label>
+        <button className="primary" disabled={handoffBusy || !contactId}><Users size={16} />{handoffBusy ? "Transmission…" : claim.assigned_contact ? "Mettre à jour l’attribution" : "Transmettre le dossier"}</button>
+        {claim.assigned_contact && <button type="button" className="secondary" disabled={handoffBusy} onClick={async () => { setHandoffBusy(true); try { const updated = await onNotify(claim.id); setHandoffMessage(updated.handoff_email_status === "SENT" ? `Email renvoyé à ${updated.assigned_contact.email}.` : updated.handoff_email_error || "Échec de l’envoi."); } catch (err) { setHandoffMessage(err.message); } finally { setHandoffBusy(false); } }}>Renvoyer l’email</button>}
+        {handoffMessage && <p className="handoff-message">{handoffMessage}</p>}
+      </form> : <p className="no-contacts">Ajoute d’abord les responsables dans la page Contacts.</p>}
+    </section>}
     {["COMPLETED", "FAILED"].includes(claim.status) && <div className="detail-actions"><button className="primary" onClick={onAddFiles}><Upload size={17} />Gérer les pièces et relancer</button></div>}
+  </div>;
+}
+
+function ClaimAttachments({ documents }) {
+  if (!documents.length) return <section className="claim-attachments"><h3>Pièces du dossier</h3><p className="no-attachments">Aucun fichier joint à ce dossier.</p></section>;
+  return <section className="claim-attachments"><h3>Pièces du dossier <span>{documents.length}</span></h3><div className="attachment-grid">{documents.map((document) => {
+    const mime = document.mime_type || "";
+    const url = document.file;
+    const image = mime.startsWith("image/") || document.kind === "PHOTO";
+    const audio = mime.startsWith("audio/") || document.kind === "AUDIO";
+    const pdf = mime === "application/pdf" || document.original_name?.toLowerCase().endsWith(".pdf");
+    return <article className="attachment-card" key={document.id}>
+      {image && url ? <a href={url} target="_blank" rel="noreferrer" className="attachment-preview"><img src={url} alt={document.original_name} loading="lazy" /></a> : <div className="attachment-file-icon">{audio ? <Headphones /> : <FileText />}</div>}
+      <div className="attachment-info"><strong title={document.original_name}>{document.original_name}</strong><span>{document.kind}{mime ? ` · ${mime}` : ""}</span>
+        {audio && url && <audio controls preload="none" src={url}>Lecture audio non prise en charge.</audio>}
+        {url && <div className="attachment-actions"><a href={url} target="_blank" rel="noreferrer">{pdf ? "Ouvrir le PDF" : image ? "Voir l’image" : "Ouvrir le fichier"}</a>{pdf && <details><summary>Aperçu</summary><iframe src={url} title={`Aperçu ${document.original_name}`} /> </details>}</div>}
+      </div>
+    </article>;
+  })}</div></section>;
+}
+
+function ContactsPage({ contacts, claims, onCreateContact, onDeleteContact, onSelectClaim }) {
+  const [form, setForm] = useState({ name: "", role: "Gestionnaire sinistres", insurer: "", email: "", phone: "" });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+  const investigations = claims.filter((claim) => claim.decision === "INVESTIGATE");
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setFormError("");
+    try {
+      await onCreateContact(form);
+      setForm({ name: "", role: "Gestionnaire sinistres", insurer: "", email: "", phone: "" });
+    } catch (err) {
+      setFormError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+  function update(event) {
+    setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  }
+  return <div className="contacts-page">
+    <section className="trace-hero contacts-hero"><div><span className="eyebrow">ÉQUIPE DE GESTION</span><h1>Contacts assurance</h1><p>Ajoute les responsables réels de ton équipe, puis attribue-leur les dossiers qui nécessitent une vérification.</p></div><div className="automation-card"><Users /><div><span>Responsables</span><strong>{contacts.length}</strong><small>Dossiers à examiner : {investigations.length}</small></div></div></section>
+    <div className="contacts-layout">
+      <section className="contact-form-card"><div className="section-title"><div><h2>Ajouter un contact</h2><p>Renseigne les coordonnées de l’équipe assurance.</p></div></div>
+        <form onSubmit={submit} className="contact-form">
+          <label>Nom complet<input name="name" value={form.name} onChange={update} required /></label>
+          <label>Fonction<input name="role" value={form.role} onChange={update} required /></label>
+          <label>Compagnie d’assurance<input name="insurer" value={form.insurer} onChange={update} placeholder="Ex. assureur du contrat" /></label>
+          <label>Email professionnel<input type="email" name="email" value={form.email} onChange={update} required /></label>
+          <label>Téléphone<input type="tel" name="phone" value={form.phone} onChange={update} /></label>
+          {formError && <p className="form-error">{formError}</p>}
+          <button className="primary" disabled={saving}>{saving ? "Enregistrement…" : "Ajouter le contact"}</button>
+        </form>
+      </section>
+      <section className="contact-directory"><div className="section-title"><div><h2>Répertoire</h2><p>Coordonnées enregistrées dans l’application.</p></div></div>
+        {contacts.length ? <div className="contact-list">{contacts.map((contact) => <article className="contact-card" key={contact.id}><span className="contact-avatar"><Users /></span><div className="contact-main"><strong>{contact.name}</strong><span>{contact.role}{contact.insurer ? ` · ${contact.insurer}` : ""}</span><div className="contact-links">{contact.email && <a href={`mailto:${contact.email}`}><Mail size={14} />{contact.email}</a>}{contact.phone && <a href={`tel:${contact.phone}`}><Phone size={14} />{contact.phone}</a>}</div></div><div className="contact-card-actions"><span className={`contact-active ${contact.is_active ? "" : "inactive"}`}>{contact.is_active ? "Actif" : "Inactif"}</span><button type="button" className="delete-contact" aria-label={`Supprimer ${contact.name}`} title="Supprimer le contact" onClick={() => onDeleteContact(contact)}><Trash2 size={16} /></button></div></article>)}</div> : <div className="empty">Aucun contact enregistré. Ajoute les responsables de ton assurance.</div>}
+      </section>
+    </div>
+    <section className="investigation-list"><div className="section-title"><div><h2>Dossiers à examiner</h2><p>Ouvre un dossier pour transmettre son analyse et ses pièces à un responsable.</p></div></div>
+      {investigations.length ? <div className="handoff-claims">{investigations.map((claim) => <button key={claim.id} onClick={() => onSelectClaim(claim)}><span><strong>{claim.customer_name}</strong><small>#{claim.id.slice(0, 8).toUpperCase()} · {claim.policy_number} · Risque {claim.risk_score ?? "—"}/100</small></span><span className={claim.assigned_contact ? "assigned-label" : "unassigned-label"}>{claim.assigned_contact ? `Attribué à ${claim.assigned_contact.name}` : "À attribuer"}</span><ChevronRight size={17} /></button>)}</div> : <p className="empty">Aucun dossier ne nécessite une vérification pour le moment.</p>}
+    </section>
   </div>;
 }
 
