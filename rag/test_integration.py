@@ -102,7 +102,7 @@ class TestIntegration(unittest.TestCase):
         self.assertEqual(intake["conditions_particulieres"], CP)
 
     def test_statuts(self):
-        attendus = {"couvert": "covered", "partiel": "covered", "non_couvert": "excluded",
+        attendus = {"couvert": "covered", "partiel": "insufficient_information", "non_couvert": "excluded",
                     "indetermine": "insufficient_information"}
         for verdict, statut in attendus.items():
             with self.subTest(verdict=verdict):
@@ -110,6 +110,16 @@ class TestIntegration(unittest.TestCase):
                 self.verifier_format(sortie)
                 self.assertEqual(sortie["coverage_status"], statut)
                 self.assertEqual(sortie["verdict_couverture"], verdict)
+
+    def test_partiel_en_investigation(self):
+        # covered sans fraude → ACCEPT automatique dans decision_agent : le partiel doit être examiné
+        rep = reponse("partiel", justification="Responsabilité partagée à 50 % (15).")
+        sortie, _ = self.lancer({**CLAIM, "conditions_particulieres": CP}, rep)
+        self.assertEqual(sortie["coverage_status"], "insufficient_information")
+        self.assertEqual(sortie["verdict_couverture"], "partiel")
+        self.assertEqual(sortie["explanation"], "Couverture partielle : Responsabilité partagée à 50 % (15).")
+        self.assertIsNone(sortie["diagnostic_error"])
+        self.assertEqual([r["article"] for r in sortie["references"]], ["7", "15"])
 
     def test_code_des_assurances(self):
         sortie, _ = self.lancer({**CLAIM, "conditions_particulieres": CP}, reponse("couvert", cites=("7", "L113-2")))

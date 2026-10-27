@@ -13,6 +13,12 @@ embedding_model, coverage_status, references, retrieved_chunks, retrieval_query,
 missing_information, confidence, diagnostic_error), plus verdict_couverture, articles_cites,
 franchise et trace.
 
+coverage_status : couvert → covered, non_couvert → excluded, indetermine → insufficient_information.
+« partiel » donne insufficient_information, pas covered : dans decision_agent (branche ines),
+covered sans risque de fraude devient un ACCEPT automatique, alors qu'une couverture partielle
+(franchise majorée, garantie réduite, responsabilité partagée) doit partir en INVESTIGATE.
+explanation commence alors par « Couverture partielle : » et verdict_couverture reste « partiel ».
+
 references : {page, section, source, text, article}, les clés lues par frontend/src/App.jsx.
 Le corpus est découpé par article, pas par page : page vaut None (le frontend affiche « Page ? ») ;
 section porte « Article 15 — titre » et source « Contrat » ou « Code des assurances ».
@@ -25,7 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # policy_agent importe chunking, retriever…
 
-STATUTS = {"couvert": "covered", "partiel": "covered", "non_couvert": "excluded",
+STATUTS = {"couvert": "covered", "partiel": "insufficient_information", "non_couvert": "excluded",
            "indetermine": "insufficient_information"}
 CONFIANCE_NUM = {"haute": 0.9, "moyenne": 0.6, "basse": 0.3}
 SOURCES = {"contrat": "Contrat", "code_assurances": "Code des assurances"}
@@ -120,7 +126,7 @@ def policy_agent_pour_backend(claim: dict, cache=True) -> dict:
         refs = []
     explication = rep["justification"]
     if rep["verdict_couverture"] == "partiel":
-        explication = f"Couverture partielle. {explication}"
+        explication = f"Couverture partielle : {explication}"
     return {"agent": "policy_rag", "engine": "gemini-rag" if diagnostic is None else "gemini-rag-erreur",
             "model": trace.get("modele") or os.environ.get("GEMINI_MODEL"),
             "embedding_model": _modele_embeddings(),
