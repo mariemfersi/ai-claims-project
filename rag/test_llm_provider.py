@@ -180,6 +180,32 @@ class TestOllama(BaseTest):
         self.assertIsNone(sortie["diagnostic_error"])
 
 
+class TestModeleSurErreur(BaseTest):
+    """integration : model est celui du fournisseur actif même si l'analyse échoue avant l'appel au LLM."""
+
+    def lancer(self):
+        def qdrant_indisponible(qs):
+            raise ConnectionError("Qdrant injoignable")
+        with mock.patch.object(pa, "retrouver_articles", qdrant_indisponible), \
+                mock.patch.dict(sys.modules, {"retriever": None}):
+            return integration.policy_agent_pour_backend(CLAIM)
+
+    def test_ollama(self):
+        os.environ.update(LLM_PROVIDER="ollama", OLLAMA_POLICY_MODEL="qwen2.5:7b", GEMINI_MODEL="gemini-x")
+        sortie = self.lancer()
+        self.assertEqual(sortie["diagnostic_error"], "ConnectionError")
+        self.assertEqual(sortie["model"], "qwen2.5:7b")
+
+    def test_ollama_modele_par_defaut(self):
+        os.environ["LLM_PROVIDER"] = "ollama"
+        self.assertEqual(self.lancer()["model"], pa.OLLAMA_DEFAULT_MODEL)
+
+    def test_gemini(self):
+        sortie = self.lancer()
+        self.assertEqual(sortie["diagnostic_error"], "ConnectionError")
+        self.assertEqual(sortie["model"], pa.DEFAULT_MODEL)
+
+
 class TestFournisseurInconnu(BaseTest):
     env = {"LLM_PROVIDER": "openai"}
 

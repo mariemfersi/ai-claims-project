@@ -93,6 +93,17 @@ def _reference(article, textes):
             "article": article["article"]}
 
 
+def _modele_llm():
+    """Modèle du fournisseur actif (LLM_PROVIDER), connu même si l'analyse échoue avant l'appel au LLM.
+    Si policy_agent ne peut pas être importé, mêmes variables d'environnement, sans les valeurs par défaut."""
+    try:
+        from policy_agent import fournisseur
+        return fournisseur()["modele"]
+    except Exception:
+        ollama = os.environ.get("LLM_PROVIDER", "").strip().lower() == "ollama"
+        return os.environ.get("OLLAMA_POLICY_MODEL" if ollama else "GEMINI_MODEL")
+
+
 def _modele_embeddings():
     try:
         from retriever import _state
@@ -128,7 +139,7 @@ def policy_agent_pour_backend(claim: dict, cache=True) -> dict:
     if rep["verdict_couverture"] == "partiel":
         explication = f"Couverture partielle : {explication}"
     return {"agent": "policy_rag", "engine": "gemini-rag" if diagnostic is None else "gemini-rag-erreur",
-            "model": trace.get("modele") or os.environ.get("GEMINI_MODEL"),
+            "model": trace.get("modele") or _modele_llm(),
             "embedding_model": _modele_embeddings(),
             "coverage_status": STATUTS.get(rep["verdict_couverture"], "insufficient_information"),
             "references": [_reference(a, textes) for a in refs],

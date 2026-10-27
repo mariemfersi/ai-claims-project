@@ -115,7 +115,8 @@ def pct(x):
 
 def rapport(lignes, meta):
     out = ["# Évaluation de bout en bout du Policy Agent", "",
-           f"- Date : {meta['date']} ; modèle : `{meta['modele']}` ; reasoning_effort : `{meta['effort']}` ; "
+           f"- Date : {meta['date']} ; fournisseur : {meta.get('fournisseur', 'gemini')} ; "
+           f"modèle : `{meta['modele']}` ; reasoning_effort : `{meta['effort']}` ; "
            f"reformulation : {'oui' if meta['reformulation'] else 'non'}.",
            f"- Dossiers évalués : {len(lignes)} sur {meta['total']}"
            + (f" (**arrêt : quota Gemini épuisé avant {meta['arret']}**)." if meta["arret"] else "."),
@@ -192,15 +193,17 @@ def main():
     dossiers = [d for d in data["dossiers"] if not args.dossiers or d["id"] in args.dossiers]
     if args.sans_cache:
         prevus = len(dossiers) * (2 if reformulation else 1)
-        print(f"Appels Gemini prévus : {prevus} (--sans-cache)")
+        print(f"Appels au LLM prévus : {prevus} (--sans-cache)")
     else:
         prevus, detail = appels_prevus(dossiers, cp, reformulation)
-        print(f"Appels Gemini prévus hors cache : {prevus} "
+        print(f"Appels au LLM prévus hors cache : {prevus} "
               f"({', '.join(f'{k} : {v}' for k, v in detail.items())}), sans compter les nouveaux essais")
 
     suffixe = args.suffixe if args.suffixe is not None else ("" if reformulation else "_sans_reformulation")
-    meta = {"date": time.strftime("%Y-%m-%d %H:%M"), "modele": pa.os.environ.get("GEMINI_MODEL", pa.DEFAULT_MODEL),
-            "effort": pa.os.environ.get("GEMINI_REASONING_EFFORT", "low") or "non envoyé",
+    f = pa.fournisseur()
+    meta = {"date": time.strftime("%Y-%m-%d %H:%M"), "fournisseur": f["nom"], "modele": f["modele"],
+            "effort": (pa.os.environ.get("GEMINI_REASONING_EFFORT", "low") if f["nom"] == "gemini" else "")
+            or "non envoyé",
             "reformulation": reformulation, "total": len(dossiers), "arret": None}
     existants = [p for p in (ROOT / f"results/eval_policy_agent{suffixe}.md", ROOT / f"results/eval_policy_agent{suffixe}.json")
                  if p.exists()]

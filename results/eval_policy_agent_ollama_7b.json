@@ -1,0 +1,480 @@
+{
+ "meta": {
+  "date": "2026-10-27 12:01",
+  "fournisseur": "ollama",
+  "modele": "qwen2.5:7b",
+  "effort": "non envoyé",
+  "reformulation": false,
+  "total": 10,
+  "arret": null
+ },
+ "dossiers": [
+  {
+   "id": "D01",
+   "scenario": "Sinistre simple, accepté",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "21",
+    "6"
+   ],
+   "cites": [
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "16",
+    "7",
+    "21",
+    "17",
+    "6",
+    "R211-10",
+    "14",
+    "R421-18",
+    "22"
+   ],
+   "rappel": 0.6666666666666666,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.6666666666666666,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 15.1
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6). Il n'y a aucune exclusion applicable (Articles 14, 16, 17, 21, 22). La franchise de 300 euros par sinistre est applicable (Article 20).",
+   "causes": [
+    "article 21 fourni mais non cité : raisonnement"
+   ],
+   "duree_dossier_s": 32.7
+  },
+  {
+   "id": "D02",
+   "scenario": "Exclusion applicable : usage VTC non déclaré",
+   "decision_attendue": "reject",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "15"
+   ],
+   "cites": [
+    "15"
+   ],
+   "fournis": [
+    "7",
+    "20",
+    "A121-1-annexe-7",
+    "15",
+    "L113-9",
+    "17",
+    "6",
+    "23",
+    "14",
+    "22"
+   ],
+   "rappel": 1.0,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 8.6
+   },
+   "justification": "Le sinistre est non couvert en vertu de l'exclusion prévue à l'article 15 du contrat, qui exclut les garanties dommages au véhicule lorsque le véhicule est utilisé pour un usage non déclaré, notamment le transport onéreux de personnes (VTC).",
+   "causes": [],
+   "duree_dossier_s": 9.1
+  },
+  {
+   "id": "D03",
+   "scenario": "Incohérence de dates déclaration / constat",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "partiel",
+   "verdict_ok": true,
+   "confiance": "moyenne",
+   "attendus": [
+    "17",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "15",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "7",
+    "16",
+    "21",
+    "17",
+    "6",
+    "15",
+    "R421-18",
+    "22",
+    "R211-10"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.5,
+   "rappel_perimetre": 0.0,
+   "cites_non_attendus": [
+    "6",
+    "15",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 15.0
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6), mais l'usage non déclaré du véhicule (privé et trajet travail) n'est pas respecté (Article 15), ce qui entraîne une franchise de 300 euros (Article 20).",
+   "causes": [
+    "article 17 fourni mais non cité : raisonnement",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)"
+   ],
+   "duree_dossier_s": 15.6
+  },
+  {
+   "id": "D04",
+   "scenario": "Photos contredisant le récit (choc frontal déclaré, dommages arrière)",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "19",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "16",
+    "7",
+    "6",
+    "21",
+    "17",
+    "R211-10",
+    "15",
+    "R421-18",
+    "22"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.0,
+   "rappel_perimetre": null,
+   "cites_non_attendus": [
+    "6",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 13.2
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6). La franchise de 300 euros est applicable (Article 20).",
+   "causes": [
+    "article 19 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "verdict « couvert » au lieu de indetermine ou partiel : raisonnement"
+   ],
+   "duree_dossier_s": 13.7
+  },
+  {
+   "id": "D05",
+   "scenario": "Facture au montant gonflé",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "19",
+    "23",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "16",
+    "7",
+    "21",
+    "R421-18",
+    "17",
+    "6",
+    "15",
+    "22",
+    "R211-10"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.0,
+   "rappel_perimetre": null,
+   "cites_non_attendus": [
+    "6",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 13.3
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6). La franchise de 300 euros par sinistre est applicable (Article 20).",
+   "causes": [
+    "article 19 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 23 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "verdict « couvert » au lieu de indetermine ou partiel : raisonnement"
+   ],
+   "duree_dossier_s": 13.9
+  },
+  {
+   "id": "D06",
+   "scenario": "Pièce manquante ou illisible",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "18",
+    "9"
+   ],
+   "cites": [
+    "9",
+    "20"
+   ],
+   "fournis": [
+    "9",
+    "R421-18",
+    "A121-1-annexe-7",
+    "22",
+    "20",
+    "17",
+    "16",
+    "15",
+    "R421-2",
+    "18"
+   ],
+   "rappel": 0.5,
+   "precision": 0.5,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 14.9
+   },
+   "justification": "Le sinistre est couvert par la garantie vol (Article 9). Il n'y a aucune exclusion applicable (Article R421-2). La franchise de 10 % du montant des dommages, avec un minimum de 300 euros, s'applique (Article 20).",
+   "causes": [
+    "article 18 fourni mais non cité : raisonnement (hors périmètre couverture)",
+    "verdict « couvert » au lieu de indetermine ou partiel : raisonnement"
+   ],
+   "duree_dossier_s": 15.3
+  },
+  {
+   "id": "D07",
+   "scenario": "Garantie ambiguë : sortie de route, conducteur non désigné",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "partiel",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "16",
+    "20",
+    "6"
+   ],
+   "cites": [
+    "16",
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "16",
+    "R211-10",
+    "6",
+    "L113-9",
+    "23",
+    "2",
+    "7",
+    "20",
+    "17",
+    "22"
+   ],
+   "rappel": 1.0,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 16.3
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6), mais une franchise supplémentaire de 500 euros s'applique en raison du conducteur non désigné (Article 16). Le fils du souscripteur, qui n'est pas un conducteur désigné, a conduit le véhicule et possède un permis depuis moins de trois ans, ce qui double la franchise. (16, 6)",
+   "causes": [],
+   "duree_dossier_s": 17.1
+  },
+  {
+   "id": "D08",
+   "scenario": "Dossier avec déclaration audio",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "8"
+   ],
+   "cites": [
+    "8",
+    "20"
+   ],
+   "fournis": [
+    "8",
+    "A121-1-annexe-7",
+    "20",
+    "17",
+    "7",
+    "L121-18",
+    "L421-9",
+    "L421-12",
+    "15",
+    "L113-2"
+   ],
+   "rappel": 1.0,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 14.8
+   },
+   "justification": "Le sinistre est couvert par la garantie bris de glace (Article 8). Il n'y a aucune exclusion applicable (Article 15). La franchise de 80 euros est applicable en cas de remplacement du pare-brise (Article 20).",
+   "causes": [],
+   "duree_dossier_s": 15.3
+  },
+  {
+   "id": "D09",
+   "scenario": "Déclaration hors délai (vol déclaré après 6 jours)",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "17",
+    "9"
+   ],
+   "cites": [
+    "9",
+    "20"
+   ],
+   "fournis": [
+    "9",
+    "A121-1-annexe-7",
+    "20",
+    "17",
+    "15",
+    "16",
+    "22",
+    "R421-2",
+    "L211-1",
+    "8"
+   ],
+   "rappel": 0.5,
+   "precision": 0.5,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.5,
+   "cites_non_attendus": [
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 13.5
+   },
+   "justification": "Le sinistre est couvert par la garantie vol (Article 9). La franchise de 10 % du montant des dommages, avec un minimum de 300 euros, s'applique (Article 20).",
+   "causes": [
+    "article 17 fourni mais non cité : raisonnement",
+    "verdict « couvert » au lieu de indetermine ou partiel : raisonnement"
+   ],
+   "duree_dossier_s": 14.0
+  },
+  {
+   "id": "D10",
+   "scenario": "Bris de glace simple, réparation d'impact",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "couvert",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "8"
+   ],
+   "cites": [
+    "8",
+    "20"
+   ],
+   "fournis": [
+    "8",
+    "20",
+    "A121-1-annexe-7",
+    "17",
+    "7",
+    "L121-18",
+    "L421-9",
+    "R211-10",
+    "15",
+    "L113-2"
+   ],
+   "rappel": 1.0,
+   "precision": 1.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 15.0
+   },
+   "justification": "Le sinistre est couvert par la garantie bris de glace (Article 8). Il n'y a aucune exclusion applicable (Article 15). La franchise de 80 euros est applicable en cas de réparation d'impact (Article 20).",
+   "causes": [],
+   "duree_dossier_s": 15.5
+  }
+ ]
+}

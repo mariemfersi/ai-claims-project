@@ -213,3 +213,87 @@ Conséquences :
   coût de durée visible ; c'est cohérent avec son objectif, mais 20 appels ne suffisent pas à le démontrer ;
 - pour la production, les cas limites (D08 : seuil de « partiel ») gagneraient à être tranchés par une règle dans le
   prompt ou dans le code plutôt que laissés à l'appréciation du modèle.
+
+### Modèles locaux avec Ollama : qwen2.5:3b et qwen2.5:7b (27 octobre 2026)
+
+Même code v2.1 (sans reformulation, température 0, sortie structurée `json_schema`), mêmes intakes, même retrieval
+(articles fournis identiques pour les trois modèles), seul le LLM de P4 change : `LLM_PROVIDER=ollama`, endpoint
+`/v1` compatible OpenAI, sans reasoning_effort. Un lancement chacun avec `--sans-cache` :
+`results/eval_policy_agent_ollama_3b.md` et `_ollama_7b.md`. Machine : Ollama 0.40.11, NVIDIA GeForce RTX 4050
+Laptop (6 Go), modèles chargés à 100 % sur le GPU. qwen2.5:3b est le modèle du `.env.example` de la branche ines.
+Pour Gemini, les deux lancements v2.1 ci-dessus (même code).
+
+| Métrique | gemini-3.5-flash-lite (v2.1, lancement 1 / 2) | qwen2.5:3b | qwen2.5:7b |
+|---|---|---|---|
+| Verdicts corrects | 7 / 10 ; 6 / 10 | 4 / 10, dont 3 pour une mauvaise raison | 6 / 10, dont 1 pour une mauvaise raison |
+| Verdicts « non_couvert » à tort (rejet automatique) | 0 ; 0 | **5** (D01, D03, D05, D06, D10) | 0 |
+| Rappel périmètre couverture | 83 % ; 71 % | 42 % | 77 % |
+| Précision | 53 % ; 57 % | 24 % | 60 % |
+| Rappel complet | 67 % ; 57 % | 38 % | 57 % |
+| Réponses P4 invalides | 0 ; 0 | 0 | 0 |
+| Durée moyenne par dossier | 13,9 s ; 12,8 s | 11,5 s | 16,2 s |
+| dont appel au LLM | 4,3 s ; 2,0 s | 9,7 s | 14,0 s |
+
+Pour Gemini, la durée par dossier comprend surtout l'attente d'au moins 13 s imposée entre deux appels (offre
+gratuite) ; l'appel lui-même dure environ 2 s (D09 : 22,3 s au lancement 1). Avec Ollama, il n'y a pas d'attente
+imposée : la durée par dossier est le retrieval plus l'appel local.
+
+| Dossier | Attendu | Gemini, lancement 1 | Gemini, lancement 2 | qwen2.5:3b | qwen2.5:7b |
+|---|---|---|---|---|---|
+| D01 | accept | couvert | couvert | **non_couvert** | couvert |
+| D02 | reject | non_couvert | non_couvert | non_couvert (15 non cité) | non_couvert |
+| D03 | investigate | **couvert** | indetermine | **non_couvert** | partiel |
+| D04 | investigate | couvert | couvert | partiel | couvert |
+| D05 | investigate | couvert | couvert | **non_couvert** | couvert |
+| D06 | investigate | indetermine | indetermine | **non_couvert** | couvert |
+| D07 | investigate | partiel | partiel | partiel | partiel |
+| D08 | accept | couvert | **partiel** | **partiel** | couvert |
+| D09 | investigate | indetermine | **couvert** | indetermine (forcé par le code) | **couvert** |
+| D10 | accept | couvert | couvert | **non_couvert** | couvert |
+
+**qwen2.5:3b invente des exclusions.** Dans 7 dossiers sur 10, sa justification applique l'exclusion de l'article
+15 (« usage non déclaré, transport onéreux de personnes ») : D03, D04, D05, D06, D08, D09 et D10. Seul D02 (course
+VTC) contient ce fait, et c'est justement le dossier où il ne l'invoque pas : le modèle reprend le texte de
+l'article fourni comme s'il décrivait le dossier. D01 et D02 sont refusés pour un permis non valide ou une
+alcoolémie (article 14) que les dossiers ne mentionnent pas. Ses verdicts corrects ne sont donc pas fiables : D02
+est « non_couvert » pour ce motif inventé, sans citer l'article 15 ; D04 est « partiel » à cause de l'exclusion
+d'usage inventée ; D09 est « indetermine » parce que la réponse ne citait aucun article fourni et que le contrôle du
+code a ramené le verdict à « indetermine » (la justification concluait « non couvert »). D07 (« partiel ») mêle la
+bonne franchise à une « exclusion pour les accidents de route » (R211-10) qui n'existe pas. Avec l'adaptateur `rag/integration.py`, « non_couvert » devient `excluded`,
+que le `decision_agent` de la branche ines transforme en REJECT : 5 sinistres couverts seraient refusés
+automatiquement.
+
+**qwen2.5:7b raisonne correctement mais sans réserve.** Aucun refus à tort, les articles cités sont ceux attendus
+pour la couverture (6 ou 8 ou 9, et 20), D02 et D07 sont justifiés comme avec Gemini. Ses deux écarts par rapport à
+Gemini vont dans le même sens : il répond « couvert » dès qu'une garantie souscrite correspond, sans relever les
+conditions à vérifier (D06 : plainte et traces d'effraction de l'article 9 ; D09 : déclaration de vol au-delà de
+2 jours ouvrés, article 17). Gemini relève la première dans ses deux lancements et la seconde dans un sur deux. D03
+est « partiel » pour une mauvaise raison (usage non déclaré, que rien dans le dossier n'établit), ce qui donne quand
+même l'investigation attendue. D04 et D05 sont « couvert », comme avec Gemini, pour la raison expliquée plus haut :
+les anomalies sont dans les pièces, que le Policy Agent ne voit pas.
+
+**JSON** : aucune réponse invalide sur les 20 appels Ollama. La sortie structurée est bien appliquée par Ollama (le
+schéma passe dans son paramètre `format`), même pour le modèle 3b.
+
+**Contexte d'Ollama** : le serveur a chargé les modèles avec une fenêtre de 4 096 tokens (valeur par défaut). Les
+prompts P4 de ce jeu de test font de 3 000 à 3 700 tokens et le journal d'Ollama n'indique aucune troncature, mais le
+plus long appel a utilisé 3 981 tokens sur 4 096 (prompt et réponse). Le code autorise jusqu'à ~6 000 tokens
+(`MAX_PROMPT_TOKENS`) : au-delà de 4 096, Ollama tronquerait le prompt sans erreur. En production, régler
+`OLLAMA_CONTEXT_LENGTH=8192` sur le serveur Ollama.
+
+Limites : un seul lancement par modèle local (la variation entre deux lancements Gemini était de 3 dossiers sur
+10), 10 dossiers, un seul GPU. Les écarts de 1 dossier entre Gemini et qwen2.5:7b ne permettent pas de conclure ;
+l'écart avec qwen2.5:3b (5 refus à tort, exclusions inventées) est d'une autre nature et se lit dans les
+justifications, pas seulement dans les scores.
+
+**Recommandation pour l'équipe** :
+- **Ne pas utiliser qwen2.5:3b pour le Policy Agent**, bien qu'il soit le modèle par défaut du `.env.example` :
+  il invente des exclusions et produirait des refus automatiques injustifiés. Il peut rester pour d'autres agents
+  si leurs évaluations le permettent.
+- **En local (Ollama), utiliser `OLLAMA_POLICY_MODEL=qwen2.5:7b`**, avec `OLLAMA_CONTEXT_LENGTH=8192`. Ses
+  résultats sont proches de ceux de Gemini sur ce jeu de test (6 / 10, aucun refus à tort, précision 60 %), pour
+  ~14 s par appel sur un GPU portable de 6 Go. Sa faiblesse, l'absence de réserves (D06, D09), compte dans
+  l'architecture de la branche ines : « covered » sans fraude devient un ACCEPT automatique.
+- **Gemini (`gemini-3.5-flash-lite`) reste le meilleur choix quand un appel externe est acceptable** : réserves
+  mieux relevées, appel de ~2 s, mais quota de l'offre gratuite (13 s entre deux appels) et données du dossier
+  envoyées à un service externe.

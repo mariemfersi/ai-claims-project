@@ -1,0 +1,523 @@
+{
+ "meta": {
+  "date": "2026-10-27 12:13",
+  "fournisseur": "ollama",
+  "modele": "qwen2.5:3b",
+  "effort": "non envoyé",
+  "reformulation": false,
+  "total": 10,
+  "arret": null
+ },
+ "dossiers": [
+  {
+   "id": "D01",
+   "scenario": "Sinistre simple, accepté",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "21",
+    "6"
+   ],
+   "cites": [
+    "6",
+    "14",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "16",
+    "7",
+    "21",
+    "17",
+    "6",
+    "R211-10",
+    "14",
+    "R421-18",
+    "22"
+   ],
+   "rappel": 0.6666666666666666,
+   "precision": 0.6666666666666666,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.6666666666666666,
+   "cites_non_attendus": [
+    "14"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 13.9
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6). Cependant, l'article 14 exclut la garantie en cas de conducteur non titulaire d'un permis de conduire en état de validité pour la catégorie du véhicule. Le conducteur Sami Ben Salah n'est pas mentionné comme titulaire d'un permis de conduire en état de validité, ce qui constitue une exclusion.",
+   "causes": [
+    "article 21 fourni mais non cité : raisonnement",
+    "verdict « non_couvert » au lieu de couvert : raisonnement"
+   ],
+   "duree_dossier_s": 27.4
+  },
+  {
+   "id": "D02",
+   "scenario": "Exclusion applicable : usage VTC non déclaré",
+   "decision_attendue": "reject",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": true,
+   "confiance": "moyenne",
+   "attendus": [
+    "15"
+   ],
+   "cites": [
+    "6",
+    "20"
+   ],
+   "fournis": [
+    "7",
+    "20",
+    "A121-1-annexe-7",
+    "15",
+    "L113-9",
+    "17",
+    "6",
+    "23",
+    "14",
+    "22"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.0,
+   "cites_non_attendus": [
+    "6",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 9.0
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6). Cependant, les exclusions générales (Article 14) excluent les dommages causés par le conducteur non titulaire d'un permis de conduire en état de validité (Article 14a) ou causés par l'assuré sous l'empire d'un état alcoolique caractérisé ou après avoir fait usage de stupéfiants (Article 14b).",
+   "causes": [
+    "article 15 fourni mais non cité : raisonnement"
+   ],
+   "duree_dossier_s": 9.5
+  },
+  {
+   "id": "D03",
+   "scenario": "Incohérence de dates déclaration / constat",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "17",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "15",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "7",
+    "16",
+    "21",
+    "17",
+    "6",
+    "15",
+    "R421-18",
+    "22",
+    "R211-10"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.5,
+   "rappel_perimetre": 0.0,
+   "cites_non_attendus": [
+    "6",
+    "15",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 9.3
+   },
+   "justification": "Le véhicule est utilisé pour un usage non déclaré aux conditions particulières, notamment le transport onéreux de personnes (covoiturage rémunéré au-delà du partage des frais). Les garanties dommages au véhicule (Articles 6 à 10) ne sont pas acquises dans ce cas.",
+   "causes": [
+    "article 17 fourni mais non cité : raisonnement",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "verdict « non_couvert » au lieu de indetermine ou partiel : raisonnement"
+   ],
+   "duree_dossier_s": 9.8
+  },
+  {
+   "id": "D04",
+   "scenario": "Photos contredisant le récit (choc frontal déclaré, dommages arrière)",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "partiel",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "19",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "15",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "16",
+    "7",
+    "6",
+    "21",
+    "17",
+    "R211-10",
+    "15",
+    "R421-18",
+    "22"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.0,
+   "rappel_perimetre": null,
+   "cites_non_attendus": [
+    "6",
+    "15",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 9.2
+   },
+   "justification": "Le véhicule est utilisé pour un usage non déclaré aux conditions particulières, notamment le transport onéreux de personnes (covoiturage rémunéré au-delà du partage des frais). De plus, l'article 15 exclut les dommages aux biens subis par le véhicule impliqué dans l'accident. Par conséquent, la garantie dommages au véhicule est partiellement couverte avec une franchise de 300 euros par sinistre.",
+   "causes": [
+    "article 19 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)"
+   ],
+   "duree_dossier_s": 9.7
+  },
+  {
+   "id": "D05",
+   "scenario": "Facture au montant gonflé",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "19",
+    "23",
+    "25"
+   ],
+   "cites": [
+    "6",
+    "15",
+    "20"
+   ],
+   "fournis": [
+    "20",
+    "16",
+    "7",
+    "21",
+    "R421-18",
+    "17",
+    "6",
+    "15",
+    "22",
+    "R211-10"
+   ],
+   "rappel": 0.0,
+   "precision": 0.0,
+   "rappel_fournis": 0.0,
+   "rappel_perimetre": null,
+   "cites_non_attendus": [
+    "6",
+    "15",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 8.8
+   },
+   "justification": "Le véhicule a été utilisé pour un usage non déclaré aux conditions particulières (transport onéreux de personnes), ce qui entraîne une exclusion de garantie (Article 15). De plus, la garantie dommages tous accidents ne couvre pas les dommages subis par le véhicule lui-même (Article 7).",
+   "causes": [
+    "article 19 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 23 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "article 25 absent des articles fournis : retrieval (hors périmètre couverture)",
+    "verdict « non_couvert » au lieu de indetermine ou partiel : raisonnement"
+   ],
+   "duree_dossier_s": 9.4
+  },
+  {
+   "id": "D06",
+   "scenario": "Pièce manquante ou illisible",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": false,
+   "confiance": "moyenne",
+   "attendus": [
+    "18",
+    "9"
+   ],
+   "cites": [
+    "15",
+    "20",
+    "18"
+   ],
+   "fournis": [
+    "9",
+    "R421-18",
+    "A121-1-annexe-7",
+    "22",
+    "20",
+    "17",
+    "16",
+    "15",
+    "R421-2",
+    "18"
+   ],
+   "rappel": 0.5,
+   "precision": 0.3333333333333333,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.0,
+   "cites_non_attendus": [
+    "15",
+    "20"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 8.8
+   },
+   "justification": "Le véhicule a été utilisé pour un usage non déclaré aux conditions particulières (transport onéreux de personnes). En outre, les exclusions liées à l'usage du véhicule (Article 15) s'appliquent. De plus, la garantie vol et tentative de vol n'est pas applicable car le véhicule a été volé.",
+   "causes": [
+    "article 9 fourni mais non cité : raisonnement",
+    "verdict « non_couvert » au lieu de indetermine ou partiel : raisonnement"
+   ],
+   "duree_dossier_s": 9.2
+  },
+  {
+   "id": "D07",
+   "scenario": "Garantie ambiguë : sortie de route, conducteur non désigné",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "partiel",
+   "verdict_ok": true,
+   "confiance": "haute",
+   "attendus": [
+    "16",
+    "20",
+    "6"
+   ],
+   "cites": [
+    "6",
+    "20",
+    "17",
+    "22",
+    "R211-10"
+   ],
+   "fournis": [
+    "16",
+    "R211-10",
+    "6",
+    "L113-9",
+    "23",
+    "2",
+    "7",
+    "20",
+    "17",
+    "22"
+   ],
+   "rappel": 0.6666666666666666,
+   "precision": 0.4,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.6666666666666666,
+   "cites_non_attendus": [
+    "17",
+    "22",
+    "R211-10"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 8.6
+   },
+   "justification": "Le sinistre est couvert par la garantie dommages tous accidents (Article 6). Cependant, il y a une exclusion pour les accidents de route (Article R211-10), qui est applicable car le sinistre survient lors d'une sortie de route (Article 17). De plus, une franchise supplémentaire de 500 euros est appliquée pour un conducteur non désigné (Article 20).",
+   "causes": [
+    "article 16 fourni mais non cité : raisonnement"
+   ],
+   "duree_dossier_s": 9.3
+  },
+  {
+   "id": "D08",
+   "scenario": "Dossier avec déclaration audio",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "partiel",
+   "verdict_ok": false,
+   "confiance": "haute",
+   "attendus": [
+    "20",
+    "8"
+   ],
+   "cites": [
+    "8",
+    "15",
+    "20",
+    "L113-2"
+   ],
+   "fournis": [
+    "8",
+    "A121-1-annexe-7",
+    "20",
+    "17",
+    "7",
+    "L121-18",
+    "L421-9",
+    "L421-12",
+    "15",
+    "L113-2"
+   ],
+   "rappel": 1.0,
+   "precision": 0.5,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [
+    "15",
+    "L113-2"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 9.2
+   },
+   "justification": "Le sinistre est couvert par la garantie de bris de glace (Article 8). Cependant, l'usage non déclaré du véhicule (Article 15) exclut la garantie de bris de glace. De plus, la réparation d'impact ne nécessite pas de franchise (Article 20). Le sinistre est donc couvert mais avec une franchise de 80 euros.",
+   "causes": [
+    "verdict « partiel » au lieu de couvert : raisonnement"
+   ],
+   "duree_dossier_s": 9.6
+  },
+  {
+   "id": "D09",
+   "scenario": "Déclaration hors délai (vol déclaré après 6 jours)",
+   "decision_attendue": "investigate",
+   "erreur_appel": false,
+   "verdict": "indetermine",
+   "verdict_ok": true,
+   "confiance": "basse",
+   "attendus": [
+    "17",
+    "9"
+   ],
+   "cites": [],
+   "fournis": [
+    "9",
+    "A121-1-annexe-7",
+    "20",
+    "17",
+    "15",
+    "16",
+    "22",
+    "R421-2",
+    "L211-1",
+    "8"
+   ],
+   "rappel": 0.0,
+   "precision": null,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 0.0,
+   "cites_non_attendus": [],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 10.3
+   },
+   "justification": "Le sinistre est non couvert car les conditions particulières excluent la garantie Vol et tentative de vol pour usage non déclaré (vacances). De plus, la garantie Vol et tentative de vol est couverte avec une franchise.",
+   "causes": [
+    "article 17 fourni mais non cité : raisonnement",
+    "article 9 fourni mais non cité : raisonnement"
+   ],
+   "duree_dossier_s": 10.7
+  },
+  {
+   "id": "D10",
+   "scenario": "Bris de glace simple, réparation d'impact",
+   "decision_attendue": "accept",
+   "erreur_appel": false,
+   "verdict": "non_couvert",
+   "verdict_ok": false,
+   "confiance": "basse",
+   "attendus": [
+    "20",
+    "8"
+   ],
+   "cites": [
+    "8",
+    "20",
+    "17",
+    "15",
+    "A121-1-annexe-7",
+    "L121-18",
+    "L421-9",
+    "R211-10",
+    "L113-2"
+   ],
+   "fournis": [
+    "8",
+    "20",
+    "A121-1-annexe-7",
+    "17",
+    "7",
+    "L121-18",
+    "L421-9",
+    "R211-10",
+    "15",
+    "L113-2"
+   ],
+   "rappel": 1.0,
+   "precision": 0.2222222222222222,
+   "rappel_fournis": 1.0,
+   "rappel_perimetre": 1.0,
+   "cites_non_attendus": [
+    "17",
+    "15",
+    "A121-1-annexe-7",
+    "L121-18",
+    "L421-9",
+    "R211-10",
+    "L113-2"
+   ],
+   "appels": {
+    "cache": 0,
+    "reseau": 1,
+    "erreurs": [],
+    "duree_api_s": 9.6
+   },
+   "justification": "Le sinistre concerne un impact sur le pare-brise, ce qui est couvert par la garantie de bris de glace. Cependant, les conditions particulières indiquent que le véhicule est utilisé pour un usage non déclaré (transport de personnes), ce qui entraîne une exclusion. De plus, le délai de déclaration du sinistre n'a pas été respecté, ce qui est également une exclusion.",
+   "causes": [
+    "verdict « non_couvert » au lieu de couvert : raisonnement"
+   ],
+   "duree_dossier_s": 10.1
+  }
+ ]
+}

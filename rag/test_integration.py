@@ -7,7 +7,7 @@ Vérifie que la sortie de policy_agent_pour_backend a les clés lues par la bran
 policy_agent(claim) dans backend/claims/agents.py, decision_agent (coverage_status,
 explanation, references) et frontend/src/App.jsx (references : page, section, source, text).
 """
-import datetime, json, sys, types, unittest
+import datetime, json, os, sys, types, unittest
 from pathlib import Path
 from unittest import mock
 
@@ -160,6 +160,14 @@ class TestIntegration(unittest.TestCase):
             sortie = integration.policy_agent_pour_backend(CLAIM)
         self.verifier_format(sortie)
         self.assertEqual(sortie["diagnostic_error"], "ModuleNotFoundError")
+
+    def test_modele_si_import_impossible(self):
+        env = {"LLM_PROVIDER": "ollama", "OLLAMA_POLICY_MODEL": "qwen2.5:3b", "GEMINI_MODEL": "gemini-x"}
+        with mock.patch.dict(sys.modules, {"policy_agent": None, "retriever": None}), \
+                mock.patch.dict(os.environ, env):
+            self.assertEqual(integration.policy_agent_pour_backend(CLAIM)["model"], "qwen2.5:3b")
+            os.environ["LLM_PROVIDER"] = "gemini"
+            self.assertEqual(integration.policy_agent_pour_backend(CLAIM)["model"], "gemini-x")
 
     def test_date_en_texte(self):
         _, intake = self.lancer({**CLAIM, "incident_date": "2026-10-03"}, reponse("couvert"))
