@@ -25,17 +25,25 @@ Usage :
 5. Contrôle : un article cité qui n'a pas été fourni est retiré et la confiance baisse ;
    JSON invalide, aucun article valide ou erreur d'appel → verdict « indetermine ».
 
-Configuration : GEMINI_API_KEY (obligatoire, jamais dans le code), GEMINI_MODEL
-(défaut : gemini-3.8-flash, modèle stable de la documentation Gemini en octobre 2026).
-Appel via l'endpoint compatible OpenAI, comme le workflow n8n, avec reasoning_effort
-(documenté pour cet endpoint : minimal, low, medium, high) pris dans
-GEMINI_REASONING_EFFORT, « low » par défaut ; une valeur vide ne l'envoie pas.
-La trace contient la taille du prompt P4 et la durée de chaque appel.
+Configuration : LLM_PROVIDER choisit le fournisseur, gemini (défaut) ou ollama ; les deux
+sont appelés via l'endpoint /chat/completions compatible OpenAI.
+- gemini : GEMINI_API_KEY (obligatoire, jamais dans le code), GEMINI_MODEL (défaut :
+  gemini-3.8-flash, modèle stable de la documentation Gemini en octobre 2026), comme le
+  workflow n8n, avec reasoning_effort (documenté pour cet endpoint : minimal, low, medium,
+  high) pris dans GEMINI_REASONING_EFFORT, « low » par défaut ; une valeur vide ne l'envoie pas.
+  Au moins MIN_INTERVAL_S entre deux appels (offre gratuite).
+- ollama : OLLAMA_BASE_URL (défaut http://localhost:11434, endpoint /v1), OLLAMA_POLICY_MODEL
+  (défaut qwen2.5:3b, comme le .env.example de la branche ines). Ni clé API ni reasoning_effort.
+  response_format json_schema est accepté : Ollama passe le schéma à son paramètre format
+  (openai/openai.go ; docs.ollama.com/capabilities/structured-outputs). Le JSON reste validé ici.
+La trace contient le fournisseur, la taille du prompt P4 et la durée de chaque appel.
 
-Cache disque des réponses Gemini dans cache_llm/ : la clé est un hash du modèle, du
-reasoning_effort et du prompt complet (système + utilisateur). Une réponse en cache ne
-consomme aucune requête ; dans la trace, l'appel a le statut « cache ». --sans-cache
-(ou cache=False) force un nouvel appel, dont la réponse remplace celle du cache.
+Cache disque des réponses du LLM dans cache_llm/ : la clé est un hash du fournisseur, du
+modèle, du reasoning_effort et du prompt complet (système + utilisateur). Pour Gemini, le
+fournisseur n'entre pas dans la clé, qui reste celle des réponses déjà en cache.
+Une réponse en cache ne consomme aucune requête ; dans la trace, l'appel a le statut
+« cache ». --sans-cache (ou cache=False) force un nouvel appel, dont la réponse remplace
+celle du cache.
 
 Champs ajoutés au schéma P1 (optionnels) :
 - conditions_particulieres : {garanties, usage_declare, conducteurs_designes, date_souscription},
@@ -50,8 +58,11 @@ ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = ROOT / "cache_llm"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 DEFAULT_MODEL = "gemini-3.8-flash"
+OLLAMA_DEFAULT_URL = "http://localhost:11434"
+OLLAMA_DEFAULT_MODEL = "qwen2.5:3b"
 MAX_ATTEMPTS = 3          # 1 appel + 2 nouveaux essais
 TIMEOUT_S = 120
+OLLAMA_TIMEOUT_S = 600    # modèle local, parfois sur CPU : un prompt P4 de ~6 000 tokens est long
 # offre gratuite : 5 requêtes par minute (HTTP 429 « limit: 5 » observé) → au moins 13 s entre deux appels
 MIN_INTERVAL_S = float(os.environ.get("GEMINI_MIN_INTERVAL_S", 13))
 _dernier_appel = [0.0]
@@ -174,31 +185,50 @@ SCHEMA_P4 = {
 }
 
 
+def fournisseur():
+    """Fournisseur, URL de l'endpoint, modèle, clé API et timeout, d'après les variables d'environnement."""
+    nom = os.environ.get("LLM_PROVIDER", "gemini").strip().lower() or "gemini"
+    if nom == "gemini":
+        return {"nom": nom, "url": GEMINI_URL, "modele": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL),
+                "cle": os.environ.get("GEMINI_API_KEY"), "timeout": TIMEOUT_S}
+    if nom == "ollama":
+        base = (os.environ.get("OLLAMA_BASE_URL") or OLLAMA_DEFAULT_URL).rstrip("/")
+        base = base if base.endswith("/v1") else f"{base}/v1"
+        return {"nom": nom, "url": f"{base}/chat/completions", "cle": None, "timeout": OLLAMA_TIMEOUT_S,
+                "modele": os.environ.get("OLLAMA_POLICY_MODEL") or OLLAMA_DEFAULT_MODEL}
+    raise GeminiError(f"LLM_PROVIDER inconnu : {nom!r} (gemini ou ollama)")
+
+
 def _params(system, user, schema=None):
     """Paramètres de l'appel. Température 0 pour R1 et P4. Avec schema : sortie structurée
-    (json_schema) ; sinon mode JSON simple (json_object)."""
+    (json_schema) ; sinon mode JSON simple (json_object). reasoning_effort pour Gemini seulement."""
     response_format = ({"type": "json_schema", "json_schema": {"name": "reponse", "strict": True, "schema": schema}}
                        if schema else {"type": "json_object"})
-    params = {"model": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL), "temperature": 0,
-              "response_format": response_format,
+    f = fournisseur()
+    params = {"model": f["modele"], "temperature": 0, "response_format": response_format,
               "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     effort = os.environ.get("GEMINI_REASONING_EFFORT", "low")
-    if effort:
+    if effort and f["nom"] == "gemini":
         params["reasoning_effort"] = effort
     return params
 
 
 def cache_path(system, user, schema=None):
-    """Fichier de cache d'un appel : hash du modèle, du reasoning_effort, de la température,
-    du response_format (schéma compris) et du prompt complet."""
+    """Fichier de cache d'un appel : hash du fournisseur, du modèle, du reasoning_effort, de la
+    température, du response_format (schéma compris) et du prompt complet. Le fournisseur
+    n'est ajouté que s'il n'est pas Gemini : les réponses Gemini déjà en cache restent valides."""
     p = _params(system, user, schema)
-    cle = json.dumps({k: p.get(k) for k in ("model", "reasoning_effort", "temperature", "response_format", "messages")},
-                     ensure_ascii=False, sort_keys=True)
+    cle = {k: p.get(k) for k in ("model", "reasoning_effort", "temperature", "response_format", "messages")}
+    nom = fournisseur()["nom"]
+    if nom != "gemini":
+        cle["provider"] = nom
+    cle = json.dumps(cle, ensure_ascii=False, sort_keys=True)
     return CACHE_DIR / f"{hashlib.sha256(cle.encode()).hexdigest()}.json"
 
 
 def call_gemini(system, user, etape="", journal=None, cache=True, schema=None):
-    """Appel Gemini en mode JSON. Renvoie le texte brut ; GeminiError en cas d'échec définitif.
+    """Appel du LLM (Gemini ou Ollama selon LLM_PROVIDER ; le nom est resté) en mode JSON.
+    Renvoie le texte brut ; GeminiError en cas d'échec définitif, quel que soit le fournisseur.
     Chaque essai est ajouté à journal : {etape, essai, statut, duree_s} (statut « cache » si la
     réponse vient du cache disque)."""
     journal = journal if journal is not None else []
@@ -206,16 +236,19 @@ def call_gemini(system, user, etape="", journal=None, cache=True, schema=None):
     if cache and fichier.exists():
         journal.append({"etape": etape, "essai": 0, "statut": "cache", "duree_s": 0.0})
         return json.loads(fichier.read_text(encoding="utf-8"))["content"]
-    key = os.environ.get("GEMINI_API_KEY")
-    if not key:
-        raise GeminiError("GEMINI_API_KEY non défini")
+    f = fournisseur()
+    headers = {"Content-Type": "application/json"}
+    if f["nom"] == "gemini":
+        if not f["cle"]:
+            raise GeminiError("GEMINI_API_KEY non défini")
+        headers["Authorization"] = f"Bearer {f['cle']}"
     params = _params(system, user, schema)
     body = json.dumps(params)
-    req = urllib.request.Request(GEMINI_URL, data=body.encode(), method="POST",
-                                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    req = urllib.request.Request(f["url"], data=body.encode(), method="POST", headers=headers)
+    intervalle = MIN_INTERVAL_S if f["nom"] == "gemini" else 0  # pas de quota en local
     last = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
-        attente = _dernier_appel[0] + MIN_INTERVAL_S - time.monotonic()
+        attente = _dernier_appel[0] + intervalle - time.monotonic()
         if attente > 0:
             time.sleep(attente)
         _dernier_appel[0] = time.monotonic()
@@ -225,14 +258,14 @@ def call_gemini(system, user, etape="", journal=None, cache=True, schema=None):
             journal.append({"etape": etape, "essai": attempt, "statut": statut,
                             "duree_s": round(time.perf_counter() - t0, 1)})
         try:
-            with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
+            with urllib.request.urlopen(req, timeout=f["timeout"]) as r:
                 data = json.loads(r.read())
             content = data["choices"][0]["message"]["content"]
             if not isinstance(content, str):
                 raise GeminiError("réponse sans contenu texte")
             log("ok")
             CACHE_DIR.mkdir(exist_ok=True)
-            fichier.write_text(json.dumps({"etape": etape, "modele": params["model"],
+            fichier.write_text(json.dumps({"etape": etape, "fournisseur": f["nom"], "modele": params["model"],
                                            "reasoning_effort": params.get("reasoning_effort"),
                                            "date": time.strftime("%Y-%m-%d %H:%M:%S"), "content": content},
                                           ensure_ascii=False, indent=1), encoding="utf-8")
@@ -500,24 +533,29 @@ def controler(rep, fournis, avertissements):
 
 def analyse_couverture(intake: dict, cache=True, reformulation=False) -> dict:
     """cache=False : nouvel appel même si la réponse est en cache. reformulation=True : les
-    sous-questions sont aussi reformulées par R1 (deux appels Gemini au lieu d'un). Désactivée par
+    sous-questions sont aussi reformulées par R1 (deux appels au LLM au lieu d'un). Désactivée par
     défaut : aucun gain mesurable sur les 10 dossiers de test le 21/10/2026 (prompts/PROMPTS.md)."""
     avertissements, journal, etat = [], [], {"quota_epuise": False}
+    try:
+        f = fournisseur()
+    except GeminiError as e:  # LLM_PROVIDER inconnu : inutile de lancer la recherche
+        return indetermine(f"Analyse impossible : {e}.", trace={"avertissements": avertissements})
     questions = sous_questions(intake)
     if reformulation:
         questions = reformuler(questions, avertissements, journal, etat, cache)
     else:
         avertissements.append("Reformulation désactivée : recherche avec les questions d'origine seulement.")
     fournis = retrouver_articles(questions)
-    trace = {"trace": {"modele": os.environ.get("GEMINI_MODEL", DEFAULT_MODEL),
-                       "reasoning_effort": os.environ.get("GEMINI_REASONING_EFFORT", "low") or None,
+    trace = {"trace": {"fournisseur": f["nom"], "modele": f["modele"],
+                       "reasoning_effort": (os.environ.get("GEMINI_REASONING_EFFORT", "low") or None)
+                       if f["nom"] == "gemini" else None,
                        "reformulation": reformulation, "sous_questions": questions,
                        "articles_fournis": [{k: v for k, v in a.items() if k not in ("texte", "meilleur_chunk")}
                                             for a in fournis],
                        "appels": journal, "avertissements": avertissements, "quota_epuise": False}}
     if etat["quota_epuise"]:  # P4 échouerait aussi : on n'envoie pas de requête inutile
         trace["trace"]["quota_epuise"] = True
-        return indetermine("Analyse impossible : quota Gemini épuisé.", **trace)
+        return indetermine(f"Analyse impossible : quota {f['nom']} épuisé.", **trace)
     if not fournis:
         return indetermine("Aucun article retrouvé pour ce dossier.", **trace)
 
@@ -526,7 +564,7 @@ def analyse_couverture(intake: dict, cache=True, reformulation=False) -> dict:
         rep = parse_json(call_gemini(PROMPT_P4, user, "p4", journal, cache, schema=SCHEMA_P4))
     except GeminiError as e:
         trace["trace"]["quota_epuise"] = e.quota
-        return indetermine(f"Analyse impossible : appel Gemini en échec ({e}).", **trace)
+        return indetermine(f"Analyse impossible : appel {f['nom']} en échec ({e}).", **trace)
     champs = {"garantie_applicable", "exclusions_applicables", "franchise", "verdict_couverture",
               "articles_cites", "justification", "confiance"}
     if rep is None or not champs <= rep.keys() or rep.get("verdict_couverture") not in VERDICTS:
@@ -586,7 +624,7 @@ def intake_depuis_dossier(d, conditions_particulieres=None):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("dossiers", nargs="*", default=["D01"])
-    ap.add_argument("--sans-cache", action="store_true", help="nouvel appel Gemini même si la réponse est en cache")
+    ap.add_argument("--sans-cache", action="store_true", help="nouvel appel au LLM même si la réponse est en cache")
     ap.add_argument("--avec-reformulation", action="store_true", help="active la reformulation R1 (désactivée par défaut)")
     args = ap.parse_args()
     data = json.loads((ROOT / "data/dossiers/dossiers_synthetiques.json").read_text(encoding="utf-8"))
