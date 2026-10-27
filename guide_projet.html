@@ -100,7 +100,7 @@ footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid 
 </header>
 
 <nav class="toc" aria-label="Sommaire">
-  <a href="#resume">En bref</a><a href="#consignes">Consignes</a><a href="#sujet">Le sujet</a><a href="#archi">Architecture</a><a href="#rag">RAG</a><a href="#multi">Multimodalité</a><a href="#prompts">Prompts</a><a href="#livrables">Livrables</a><a href="#planning">Planning</a><a href="#v0">Travail v0</a><a href="#suivi">Suivi de demain</a><a href="#policy-llm">LLM du Policy Agent</a>
+  <a href="#resume">En bref</a><a href="#consignes">Consignes</a><a href="#sujet">Le sujet</a><a href="#archi">Architecture</a><a href="#rag">RAG</a><a href="#multi">Multimodalité</a><a href="#prompts">Prompts</a><a href="#livrables">Livrables</a><a href="#planning">Planning</a><a href="#v0">Travail v0</a><a href="#suivi">Suivi de demain</a>
 </nav>
 
 <section id="resume">
@@ -337,60 +337,6 @@ footer{margin-top:56px;color:var(--muted);font-size:.85rem;border-top:1px solid 
     <li>Dire ce qui est prévu pour la semaine 2.</li>
   </ol>
   <p>Chaque membre doit pouvoir expliquer chaque partie : prenez le temps de relire ensemble le code et les choix avant la séance.</p>
-</section>
-
-<section id="policy-llm">
-  <h2><span class="n">11</span>Policy Agent : LLM, résultats et limites</h2>
-  <p>Le Policy Agent (<code>rag/policy_agent.py</code>) appelle son LLM via l'endpoint compatible OpenAI. Le fournisseur se choisit par variable d'environnement, sans changer le code ni l'adaptateur du backend (<code>rag/integration.py</code>). Détail de l'évaluation : <code>results/eval_policy_agent.md</code>, section Analyse.</p>
-
-  <h3>Configuration du LLM</h3>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Variable</th><th>Valeur</th><th>Rôle</th></tr></thead>
-    <tbody>
-      <tr><td class="mono">LLM_PROVIDER</td><td class="mono">gemini</td><td>Défaut. Avec <code>GEMINI_API_KEY</code>, <code>GEMINI_MODEL</code>, <code>GEMINI_REASONING_EFFORT</code>.</td></tr>
-      <tr><td class="mono">LLM_PROVIDER</td><td class="mono">ollama</td><td>Modèle local, sans clé API ni reasoning_effort.</td></tr>
-      <tr><td class="mono">OLLAMA_BASE_URL</td><td class="mono">http://localhost:11434</td><td>Le code ajoute <code>/v1</code>.</td></tr>
-      <tr><td class="mono">OLLAMA_POLICY_MODEL</td><td class="mono">qwen2.5:7b</td><td><span class="pill done">recommandé</span> en local.</td></tr>
-      <tr><td class="mono">OLLAMA_CONTEXT_LENGTH</td><td class="mono">8192</td><td><span class="pill part">obligatoire</span> à régler sur le <strong>serveur</strong> Ollama, pas dans le code.</td></tr>
-    </tbody>
-  </table></div>
-  <ul class="clean">
-    <li><strong>qwen2.5:7b recommandé en local</strong> : aucun refus à tort sur les 10 dossiers, articles cités proches de ceux de Gemini, ~14 s par appel sur un GPU portable de 6 Go.</li>
-    <li><strong>qwen2.5:3b déconseillé</strong> pour le Policy Agent, bien qu'il soit le modèle du <code>.env.example</code> : 5 refus à tort sur 10, parce qu'il invente des exclusions. Il applique « usage non déclaré » dans 7 dossiers où rien ne l'établit, et transforme l'absence d'une information en exclusion. Extraits de ses justifications :
-      <ul class="clean">
-        <li>D10 (bris de glace simple) : « les conditions particulières indiquent que le véhicule est utilisé pour un usage non déclaré (transport de personnes), ce qui entraîne une exclusion » : rien de tel dans le dossier ni dans les conditions particulières.</li>
-        <li>D01 (sinistre simple, à accepter) : « Le conducteur Sami Ben Salah n'est pas mentionné comme titulaire d'un permis de conduire en état de validité, ce qui constitue une exclusion. »</li>
-        <li>D05 : « la garantie dommages tous accidents ne couvre pas les dommages subis par le véhicule lui-même (Article 7) », alors que c'est précisément son objet.</li>
-      </ul>
-      Dans l'architecture du backend, « non_couvert » devient <code>excluded</code>, puis un REJECT automatique.</li>
-    <li><strong><code>OLLAMA_CONTEXT_LENGTH=8192</code> obligatoire</strong> : par défaut, Ollama charge le modèle avec une fenêtre de 4 096 tokens et, au-delà, <strong>tronque le prompt sans erreur</strong>. Nos appels (prompt P4 et réponse) atteignent déjà ~4 000 tokens (3 981 au maximum sur le jeu de test), et le code autorise des prompts jusqu'à ~6 000.</li>
-    <li><strong>Gemini reste le meilleur pour relever les réserves</strong> si un appel externe est acceptable : c'est le seul qui signale les conditions à vérifier (plainte et effraction pour un vol), ~2 s par appel. En contrepartie : quota de l'offre gratuite (13 s entre deux appels) et données du dossier envoyées à un service externe.</li>
-  </ul>
-
-  <h3>Comparaison sur les 10 dossiers synthétiques</h3>
-  <p>Même code (sans reformulation, température 0, sortie structurée), mêmes articles fournis au LLM pour les trois modèles : seul le raisonnement change.</p>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Métrique</th><th>gemini-3.5-flash-lite (lancements 1 ; 2)</th><th>qwen2.5:3b</th><th>qwen2.5:7b</th></tr></thead>
-    <tbody>
-      <tr><td>Verdicts corrects</td><td class="num">7/10 ; 6/10</td><td class="num">4/10 *</td><td class="num">6/10</td></tr>
-      <tr><td>Refus à tort (REJECT automatique)</td><td class="num">0 ; 0</td><td class="num">5</td><td class="num">0</td></tr>
-      <tr><td>Rappel périmètre couverture</td><td class="num">83 % ; 71 %</td><td class="num">42 %</td><td class="num">77 %</td></tr>
-      <tr><td>Précision des articles</td><td class="num">53 % ; 57 %</td><td class="num">24 %</td><td class="num">60 %</td></tr>
-      <tr><td>Réponses JSON invalides</td><td class="num">0 ; 0</td><td class="num">0</td><td class="num">0</td></tr>
-      <tr><td>Durée moyenne par dossier</td><td class="num">13,9 s ; 12,8 s</td><td class="num">11,5 s</td><td class="num">16,2 s</td></tr>
-      <tr><td>dont appel au LLM</td><td class="num">4,3 s ; 2,0 s</td><td class="num">9,7 s</td><td class="num">14,0 s</td></tr>
-    </tbody>
-  </table></div>
-  <p>* dont 3 pour une mauvaise raison. Pour Gemini, la durée par dossier est surtout l'attente imposée par le quota gratuit.</p>
-  <div class="callout">
-    <p><strong>Mise en garde :</strong> un seul lancement par modèle local, sur 10 dossiers. Deux lancements Gemini identiques diffèrent déjà sur 3 dossiers : l'écart d'un dossier entre Gemini et qwen2.5:7b ne permet pas de conclure. L'écart avec qwen2.5:3b est d'une autre nature : il se lit dans les justifications (exclusions inventées), pas seulement dans les scores.</p>
-  </div>
-
-  <h3>Limites</h3>
-  <ul class="clean">
-    <li><strong>Couvert sous conditions = ACCEPT automatique avec qwen2.5:7b.</strong> Il répond « couvert » dès qu'une garantie souscrite correspond, sans relever les conditions à vérifier : D06 (vol : plainte et traces d'effraction, article 9), D09 (vol déclaré au-delà de 2 jours ouvrés, article 17). Ces dossiers sortent en <code>covered</code>, que le <code>decision_agent</code> du backend transforme en ACCEPT s'il n'y a pas de risque de fraude. <span class="pill todo">prévu en v3</span> : verdict déterminé par des règles, avec des vérifications déterministes (délais, pièces requises).</li>
-    <li>Les anomalies entre pièces (photos qui contredisent le récit, facture gonflée) restent invisibles pour le Policy Agent : elles relèvent des agents Vision, Document et Fraud.</li>
-  </ul>
 </section>
 
 <footer>AI Claims Agent · page de cadrage v0 · 7 octobre 2026</footer>
