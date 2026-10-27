@@ -14,7 +14,8 @@ même tokenisation BM25, classements complets des deux retrievers, rangs à part
 score = 1/(k + rang_BM25) + 1/(k + rang_dense).
 
 Le client Qdrant, le modèle et l'index BM25 sont chargés une seule fois, au premier appel.
-En mode local, un seul processus peut ouvrir qdrant_db/ à la fois.
+En mode local, un seul processus peut ouvrir qdrant_db/ à la fois. Avec QDRANT_URL (ex.
+http://qdrant:6333 dans Docker), le client se connecte à ce serveur (index_qdrant.get_client).
 """
 import atexit, sys
 from index_qdrant import COLLECTION, get_client

@@ -38,6 +38,10 @@ python rag/eval_retrieval.py                       # multilingual-e5-small (rapi
 python rag/eval_retrieval.py --model BAAI/bge-m3   # modèle cible, plus lourd (~2 Go)
 ```
 
+Résultats du RAG : [results/SYNTHESE_RAG.md](results/SYNTHESE_RAG.md) (retrieval) et
+[results/eval_policy_agent.md](results/eval_policy_agent.md) (Policy Agent de bout en bout).
+Intégration du Policy Agent dans le backend Django (branche `ines`) : **[docs/INTEGRATION.md](docs/INTEGRATION.md)**.
+
 ## Lancer le workflow n8n
 
 1. Démarrer n8n : `npx n8n` (ou Docker : `docker run -it --rm -p 5678:5678 n8nio/n8n`), puis ouvrir http://localhost:5678
