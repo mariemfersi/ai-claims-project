@@ -254,7 +254,7 @@ function TracePage({ systemInfo, claims, selected, setSelected }) {
           {claims.map((claim) => <option key={claim.id} value={claim.id}>{claim.customer_name} · {claim.status}</option>)}
         </select>
       </label>
-      {observed && (observed.status === "COMPLETED" ? <div className="trace-summary"><span>Décision</span><strong>{observed.decision}</strong><span>Risque</span><strong>{observed.risk_score}/100</strong><span>Confiance</span><strong>{Math.round((observed.confidence || 0) * 100)}%</strong></div> : <div className="trace-summary"><span>État</span><strong>{statusLabels[observed.status]}</strong></div>)}
+      {observed && (observed.status === "COMPLETED" ? <div className="trace-summary"><span>Décision</span><strong>{observed.decision}</strong><span>Risque</span><strong>{observed.risk_score == null ? "Non évalué" : `${observed.risk_score}/100`}</strong><span>Confiance</span><strong>{Math.round((observed.confidence || 0) * 100)}%</strong></div> : <div className="trace-summary"><span>État</span><strong>{statusLabels[observed.status]}</strong></div>)}
     </section>
 
     <section className="timeline-section">
@@ -285,7 +285,7 @@ function TracePage({ systemInfo, claims, selected, setSelected }) {
         <div className="trace-title"><Calculator /><div><h2>Calcul du score de risque</h2><p>{systemInfo.risk.formula}</p></div></div>
         <div className="formula">Risque = min(100, Σ points)</div>
         <div className="rule-list">{systemInfo.risk.rules.map((rule) => <div key={rule.key}><span>{rule.label}</span><strong>+{rule.points}</strong></div>)}</div>
-        <div className="calculation-result"><Gauge /><div><span>Calcul de ce dossier</span>{fraud.score_breakdown?.length ? fraud.score_breakdown.map((item) => <p key={item.rule}>+{item.points} · {item.evidence}</p>) : <p>Aucune incohérence détectée : +0</p>}<strong>Total : {observed?.risk_score ?? 0}/100</strong></div></div>
+        <div className="calculation-result"><Gauge /><div><span>Calcul de ce dossier</span>{fraud.score_breakdown?.length ? fraud.score_breakdown.map((item) => <p key={item.rule}>+{item.points} · {item.evidence}</p>) : fraud.assessment_status === "incomplete" ? <p>Analyse incomplète : le score n'est pas évalué.</p> : <p>Aucune incohérence détectée : +0</p>}<strong>Total : {observed?.risk_score == null ? "Non évalué" : `${observed.risk_score}/100`}</strong></div></div>
       </article>
 
       <article className="explain-card">
@@ -303,10 +303,13 @@ function AgentCard({ agent, result, progress }) {
   const completed = progress?.status === "COMPLETED" || Boolean(result);
   const failed = progress?.status === "FAILED";
   const label = running ? "En cours" : completed ? "Terminé" : failed ? "Échec" : "En attente";
+  const actualEngine = result?.engine === "local-fallback" ? "Fallback local" : result?.engine || agent.engine;
+  const actualModel = result?.engine === "local-fallback" ? "Non utilisé (fallback)" : result?.model || agent.llm || "Aucun LLM dans le MVP";
   return <article className={`agent-card ${result ? "has-result" : ""}`}>
     <div className="agent-card-head"><span className="agent-icon">{running ? <LoaderCircle className="spin" /> : <Bot />}</span><div><h3>{agent.name}</h3><span className={running ? "agent-running" : failed ? "agent-failed" : ""}>{progress ? label : agent.status}</span></div></div>
     {progress && <AgentProgress progress={progress} />}
-    <dl><div><dt>Moteur actuel</dt><dd>{agent.engine}</dd></div><div><dt>LLM</dt><dd>{agent.llm || "Aucun LLM dans le MVP"}</dd></div><div><dt>Entrée</dt><dd>{agent.input}</dd></div><div><dt>Sortie</dt><dd>{agent.output}</dd></div></dl>
+    <dl><div><dt>Moteur utilisé</dt><dd>{actualEngine}</dd></div><div><dt>LLM utilisé</dt><dd>{actualModel}</dd></div><div><dt>Entrée</dt><dd>{agent.input}</dd></div><div><dt>Sortie</dt><dd>{agent.output}</dd></div></dl>
+    {result?.pdf_extraction_comparison?.length > 0 && <section className="pdf-comparison"><h4>Comparaison PDF : pypdf et OCR</h4>{result.pdf_extraction_comparison.map((pdf) => <details key={pdf.file}><summary>{pdf.file} · {pdf.status === "compared" ? `similarité ${pdf.similarity == null ? "—" : `${Math.round(pdf.similarity * 100)}%`}` : pdf.error ? "OCR indisponible" : "pypdf indisponible"} · texte retenu : {pdf.selected_method}</summary>{pdf.pypdf_error && <p>{pdf.pypdf_error}</p>}{pdf.error && <p>{pdf.error}</p>}<p><strong>pypdf ({pdf.pypdf_characters} caractères)</strong></p><pre>{pdf.pypdf_excerpt || "Aucun texte extrait par pypdf."}</pre><p><strong>OCR Tesseract ({pdf.ocr_characters} caractères)</strong></p><pre>{pdf.ocr_excerpt || "Aucun texte extrait par OCR."}</pre><p><strong>Texte identique retrouvé dans les deux</strong></p><pre>{pdf.shared_text || "Aucun segment identique suffisamment long ; vérifier les deux extractions ci-dessus."}</pre></details>)}</section>}
     {result && <details><summary>Voir la sortie JSON</summary><pre>{JSON.stringify(result, null, 2)}</pre></details>}
   </article>;
 }
@@ -405,7 +408,7 @@ function ClaimDetail({ claim, contacts, onRetry, onAddFiles, onHandoff, onNotify
     {["SUBMITTED", "PROCESSING"].includes(claim.status) && <div className="processing-card"><LoaderCircle className="spin" /><div className="processing-content"><strong>Analyse automatique en cours</strong><p>n8n coordonne les agents spécialisés.</p>{claim.agent_results?.timeline && <WorkflowProgress timeline={claim.agent_results.timeline} />}</div></div>}
     <ClaimAttachments documents={claim.documents || []} />
     {claim.status === "COMPLETED" && <>
-      <div className="score-grid"><div><span>Confiance</span><strong>{Math.round((claim.confidence || 0) * 100)}%</strong></div><div><span>Score de risque</span><strong>{claim.risk_score ?? 0}/100</strong></div><div><span>Documents</span><strong>{claim.documents.length}</strong></div></div>
+      <div className="score-grid"><div><span>Confiance</span><strong>{Math.round((claim.confidence || 0) * 100)}%</strong></div><div><span>Risque</span><strong>{claim.risk_score == null ? "Non évalué" : `${claim.risk_score}/100`}</strong></div><div><span>Documents</span><strong>{claim.documents.length}</strong></div></div>
       <section className="evidence"><h3>Justification</h3>{claim.reasons.map((reason, index) => <p key={index}><CheckCircle2 size={17} />{reason}</p>)}</section>
       <section className="evidence contract-evidence"><h3>Références du contrat</h3>{claim.policy_references.length ? claim.policy_references.map((ref, index) => <details key={index}><summary><ShieldCheck size={17} />Page {ref.page || "?"} · {ref.section || ref.source}</summary><p>{ref.text}</p></details>) : <p>Aucune référence retournée.</p>}</section>
     </>}

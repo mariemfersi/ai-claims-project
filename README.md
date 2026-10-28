@@ -15,7 +15,7 @@ Prototype universitaire d'automatisation des sinistres automobiles.
 ## Démarrage avec Docker
 
 1. Lancer Ollama Desktop.
-2. Installer `qwen3:4b`, `qwen3-vl:4b` et `qwen3-embedding:0.6b` avec `ollama pull`.
+2. Installer les modèles configurés dans `.env` : `qwen2.5:3b`, `llava:7b` et `nomic-embed-text:latest` (ou remplacer les variables `OLLAMA_*_MODEL` par les noms présents dans Ollama).
 3. Copier `.env.example` vers `.env` si le fichier n'existe pas.
 4. Lancer `docker compose up --build`.
 5. Ouvrir React sur `http://localhost:5173`.
@@ -44,12 +44,18 @@ Définir `N8N_WEBHOOK_URL=` dans `.env`. Les dossiers restent au statut `SUBMITT
 
 ## Modèles
 
-- Document Agent : `qwen3:4b`, avec PyPDF pour le texte natif et le VLM/OCR pour les images.
+- Document Agent : `qwen2.5:3b`; extraction de chaque PDF par pypdf et Tesseract OCR français/anglais, comparaison des deux résultats dans la sortie de l’agent, puis sélection du texte natif s’il est exploitable ou de l’OCR pour les PDF scannés.
 - Déclarations audio : `faster-whisper` avec le modèle local `small` en français, CPU int8.
-- Vision Agent : `qwen3-vl:4b`.
-- Policy RAG Agent : `qwen3:4b` et `qwen3-embedding:0.6b`.
+- Vision Agent : `llava:7b`.
+- Policy RAG Agent : `qwen2.5:3b` et `nomic-embed-text:latest`.
 
 Ollama est l'unique moteur d'IA du projet. Si Ollama est fermé ou si un modèle manque, les agents reviennent à leur fallback déterministe sans arrêter le workflow.
 
 Le Policy RAG utilise les Conditions générales réelles et publiques AXA France « Mon Auto », version septembre 2026. Le PDF officiel de 104 pages est conservé dans `backend/claims/corpus/axa_mon_auto_septembre_2026.pdf`; sa provenance et son URL sont décrites dans `backend/claims/policy_corpus.json`. Les pages 5 à 103 sont extraites et indexées, puis les cinq pages les plus proches de la déclaration sont transmises au modèle. La couverture finale dépend néanmoins des Conditions particulières du contrat de l'assuré.
+
+La comparaison PDF est visible dans le résultat JSON du Document Agent : texte pypdf, texte OCR, similarité, segments identiques et méthode retenue. Tesseract et la langue française sont installés dans l’image Docker du backend. Voir `output/evaluation/evaluation_rag.md` pour l’évaluation de recherche et `output/documents/bibliotheque_prompts.md` pour la bibliothèque de prompts versionnée.
+
+Pour reproduire le benchmark avec le modèle d’embeddings local : `python output/evaluation/evaluate_rag.py --ollama --model nomic-embed-text:latest` (Ollama doit être lancé). Sans le drapeau `--ollama`, le script calcule uniquement le baseline lexical.
+
+Le plan de démonstration de 15 minutes et la préparation des questions de soutenance sont dans `output/documents/plan_demo_15min.md`.
 

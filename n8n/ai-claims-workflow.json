@@ -12,47 +12,15 @@
       "position": [0, 260]
     },
     {
-      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/document/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id }) }}", "options": {}},
-      "id": "document",
-      "name": "Document Agent",
+      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/specialists/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id }) }}", "options": {}},
+      "id": "specialists",
+      "name": "Run Specialist Agents in Parallel",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [260, 100]
+      "position": [300, 260]
     },
     {
-      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/vision/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id }) }}", "options": {}},
-      "id": "vision",
-      "name": "Vision Agent",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [260, 260]
-    },
-    {
-      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/policy/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id }) }}", "options": {}},
-      "id": "policy",
-      "name": "Policy RAG Agent",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [260, 420]
-    },
-    {
-      "parameters": {"mode": "combine", "combineBy": "combineByPosition", "options": {}},
-      "id": "merge-document-vision",
-      "name": "Merge Document and Vision",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [500, 170]
-    },
-    {
-      "parameters": {"mode": "combine", "combineBy": "combineByPosition", "options": {}},
-      "id": "merge-all-specialists",
-      "name": "Merge Specialist Agents",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [720, 260]
-    },
-    {
-      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/fraud/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id, document: $('Document Agent').item.json, vision: $('Vision Agent').item.json, policy: $('Policy RAG Agent').item.json }) }}", "options": {}},
+      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/fraud/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id, document: $('Run Specialist Agents in Parallel').item.json.document, vision: $('Run Specialist Agents in Parallel').item.json.vision, policy: $('Run Specialist Agents in Parallel').item.json.policy }) }}", "options": {}},
       "id": "fraud",
       "name": "Fraud Agent",
       "type": "n8n-nodes-base.httpRequest",
@@ -60,7 +28,7 @@
       "position": [940, 260]
     },
     {
-      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/decision/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id, document: $('Document Agent').item.json, vision: $('Vision Agent').item.json, policy: $('Policy RAG Agent').item.json, fraud: $('Fraud Agent').item.json }) }}", "options": {}},
+      "parameters": {"method": "POST", "url": "http://backend:8000/api/internal/agents/decision/", "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ claim_id: $('Receive Claim').item.json.body.claim_id, document: $('Run Specialist Agents in Parallel').item.json.document, vision: $('Run Specialist Agents in Parallel').item.json.vision, policy: $('Run Specialist Agents in Parallel').item.json.policy, fraud: $('Fraud Agent').item.json }) }}", "options": {}},
       "id": "decision",
       "name": "Decision Agent",
       "type": "n8n-nodes-base.httpRequest",
@@ -68,7 +36,7 @@
       "position": [1180, 260]
     },
     {
-      "parameters": {"method": "POST", "url": "={{ $('Receive Claim').item.json.body.callback_url }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "X-Callback-Token", "value": "={{ $('Receive Claim').item.json.body.callback_token }}"}]}, "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ decision: $('Decision Agent').item.json, agent_results: { document: $('Document Agent').item.json, vision: $('Vision Agent').item.json, policy: $('Policy RAG Agent').item.json, fraud: $('Fraud Agent').item.json } }) }}", "options": {}},
+      "parameters": {"method": "POST", "url": "={{ $('Receive Claim').item.json.body.callback_url }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "X-Callback-Token", "value": "={{ $('Receive Claim').item.json.body.callback_token }}"}]}, "sendBody": true, "contentType": "raw", "rawContentType": "application/json", "body": "={{ JSON.stringify({ decision: $('Decision Agent').item.json, agent_results: { document: $('Run Specialist Agents in Parallel').item.json.document, vision: $('Run Specialist Agents in Parallel').item.json.vision, policy: $('Run Specialist Agents in Parallel').item.json.policy, fraud: $('Fraud Agent').item.json } }) }}", "options": {}},
       "id": "callback",
       "name": "Save Final Result",
       "type": "n8n-nodes-base.httpRequest",
@@ -77,12 +45,8 @@
     }
   ],
   "connections": {
-    "Receive Claim": {"main": [[{"node": "Document Agent", "type": "main", "index": 0}, {"node": "Vision Agent", "type": "main", "index": 0}, {"node": "Policy RAG Agent", "type": "main", "index": 0}]]},
-    "Document Agent": {"main": [[{"node": "Merge Document and Vision", "type": "main", "index": 0}]]},
-    "Vision Agent": {"main": [[{"node": "Merge Document and Vision", "type": "main", "index": 1}]]},
-    "Merge Document and Vision": {"main": [[{"node": "Merge Specialist Agents", "type": "main", "index": 0}]]},
-    "Policy RAG Agent": {"main": [[{"node": "Merge Specialist Agents", "type": "main", "index": 1}]]},
-    "Merge Specialist Agents": {"main": [[{"node": "Fraud Agent", "type": "main", "index": 0}]]},
+    "Receive Claim": {"main": [[{"node": "Run Specialist Agents in Parallel", "type": "main", "index": 0}]]},
+    "Run Specialist Agents in Parallel": {"main": [[{"node": "Fraud Agent", "type": "main", "index": 0}]]},
     "Fraud Agent": {"main": [[{"node": "Decision Agent", "type": "main", "index": 0}]]},
     "Decision Agent": {"main": [[{"node": "Save Final Result", "type": "main", "index": 0}]]}
   },

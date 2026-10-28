@@ -3,6 +3,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
@@ -22,7 +23,7 @@ def system_info(request):
             "trigger": "Webhook appelé par Django après la création d'un dossier",
         },
         "agents": [
-            {"key": "document", "name": "Document Agent", "order": 1, "execution": "parallel", "engine": "Faster-Whisper + Ollama + extraction PDF/OCR", "llm": settings.OLLAMA_DOCUMENT_MODEL, "speech_model": settings.WHISPER_MODEL, "status": "Actif avec fallback local", "input": "Formulaire, constat PDF, facture et audio", "output": "Transcription, faits structurés, documents et pièces manquantes"},
+            {"key": "document", "name": "Document Agent", "order": 1, "execution": "parallel", "engine": "pypdf + OCR Tesseract (comparaison) + Faster-Whisper + Ollama", "llm": settings.OLLAMA_DOCUMENT_MODEL, "speech_model": settings.WHISPER_MODEL, "status": "Extraction PDF double (pypdf/OCR)", "input": "Formulaire, PDF textuel ou scanné, facture et audio", "output": "Comparaison pypdf/OCR, texte commun, transcription, faits structurés et pièces manquantes"},
             {"key": "vision", "name": "Vision Agent", "order": 1, "execution": "parallel", "engine": "VLM via Ollama", "llm": settings.OLLAMA_VISION_MODEL, "status": "Actif avec fallback local", "input": "Photos du véhicule", "output": "Zone endommagée, sévérité, qualité et cohérence"},
             {"key": "policy", "name": "Policy RAG Agent", "order": 1, "execution": "parallel", "engine": "Embeddings + similarité cosinus + Ollama", "llm": settings.OLLAMA_POLICY_MODEL, "status": "RAG actif avec fallback lexical", "input": "Description du sinistre et corpus de garanties", "output": "Statut de couverture et articles justificatifs"},
             {"key": "fraud", "name": "Fraud Agent", "order": 2, "execution": "sequential", "engine": "Moteur de règles pondérées", "llm": None, "status": "MVP déterministe", "input": "Résultats Document, Vision et Policy RAG", "output": "Incohérences, preuves et score de risque"},
@@ -210,6 +211,28 @@ def run_document_agent(request):
     claim = get_object_or_404(Claim, id=request.data.get("claim_id"))
     result = _execute_agent(claim.id, "document", document_agent, claim)
     return Response(result)
+
+
+@api_view(["POST"])
+def run_specialist_agents(request):
+    """Run Document, Vision and Policy concurrently; n8n continues with their merged outputs."""
+    claim_id = request.data.get("claim_id")
+    get_object_or_404(Claim, id=claim_id)
+    workers = {
+        "document": document_agent,
+        "vision": vision_agent,
+        "policy": policy_agent,
+    }
+
+    def execute(agent_key, callback):
+        # Load a separate ORM instance/connection context for each worker thread.
+        claim = Claim.objects.prefetch_related("documents").get(id=claim_id)
+        return _execute_agent(claim.id, agent_key, callback, claim)
+
+    with ThreadPoolExecutor(max_workers=len(workers), thread_name_prefix="claim-agent") as pool:
+        futures = {key: pool.submit(execute, key, callback) for key, callback in workers.items()}
+        results = {key: future.result() for key, future in futures.items()}
+    return Response(results)
 
 
 @api_view(["POST"])

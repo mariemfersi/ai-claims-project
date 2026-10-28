@@ -99,3 +99,9 @@ main { width: min(1180px, 92vw); margin: 0 auto; padding-bottom: 60px; }
 @media (max-width: 900px) { .contacts-layout { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .handoff-claims > button { grid-template-columns: 1fr auto; }.handoff-claims > button > svg { display: none; }.attachment-grid { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)); }.contacts-page { padding-top: 18px; } }
 
+.pdf-comparison { margin: 12px 0; padding: 12px; border: 1px solid #dfe7ef; border-radius: 10px; background: #f8fafc; }
+.pdf-comparison h4 { margin: 0 0 9px; font-size: 13px; color: #26364c; }
+.pdf-comparison details { margin: 8px 0; }
+.pdf-comparison summary { cursor: pointer; color: #1667c5; font-size: 11px; font-weight: 800; }
+.pdf-comparison p { margin: 10px 0 4px; color: #44536a; font-size: 11px; }
+.agent-card .pdf-comparison pre { max-height: 160px; background: #fff; border: 1px solid #dfe7ef; color: #243247; margin: 3px 0 8px; }
