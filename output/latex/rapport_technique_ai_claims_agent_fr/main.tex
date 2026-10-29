@@ -136,19 +136,19 @@ Le corpus général est le PDF public des Conditions générales AXA France « M
 
 \subsection*{Étapes de recherche}
 \begin{enumerate}
-\item \strong{Découpage.} Le texte extrait est organisé par page. Un passage conserve le numéro de page, la section estimée, l’assureur, la version et la source ; les textes très longs sont tronqués.
+\item \strong{Découpage.} Le texte extrait est découpé en fenêtres de 500 mots avec un chevauchement de 50 mots, sans franchir les limites d’une page. Chaque passage conserve le numéro de page, la section estimée, l’assureur, la version et la source.
 \item \strong{Requête.} Le récit, la date et le lieu sont complétés par des thèmes de recherche tels que collision, dommages au véhicule, responsabilité civile et exclusions.
 \item \strong{Recherche.} Ollama calcule les embeddings des pages et de la requête. Le backend classe les pages par similarité cosinus et retient les cinq premières. Les vecteurs et résultats sont gardés en cache mémoire Python ; il n’y a pas d’index vectoriel persistant.
 \item \strong{Contexte et réponse.} Le Policy Agent reçoit les cinq passages et, si disponible, le texte extrait des Conditions particulières jointes. Il produit un statut, une explication, des références et les informations manquantes.
 \end{enumerate}
 
 \subsection*{Choix et limites}
-Le découpage par page garde une correspondance directe avec le PDF et simplifie la vérification d’une référence. Il est adapté à un corpus de démonstration unique ; un article peut cependant s’étendre sur plusieurs pages. La recherche cosinus favorise la proximité sémantique mais ne prouve pas qu’une clause s’applique au dossier. Un repli lexical existe si Ollama est indisponible ; il retrouve des passages mais ne doit pas trancher seul la couverture.
+Les fenêtres limitent la taille du contexte envoyé au modèle d’embeddings ; le chevauchement réduit le risque de couper une clause au milieu. Les pages restent attachées aux passages pour vérifier les références. Cette segmentation ne reconstitue pas automatiquement un article réparti sur plusieurs pages. La recherche cosinus favorise la proximité sémantique mais ne prouve pas qu’une clause s’applique au dossier. Un repli lexical existe si Ollama est indisponible ; il retrouve des passages mais ne doit pas trancher seul la couverture.
 
-Une garde déterministe vérifie certains cas de Conditions particulières : par exemple, si le modèle répond « informations insuffisantes » alors que le document client identifie le bon numéro de contrat et confirme explicitement une garantie collision active, le statut peut être ramené à \code{covered}. Une exclusion explicite est conservée comme telle. Cette garde vise un cas de démonstration et ne remplace pas une validation sémantique ou contractuelle exhaustive.
+Les Conditions particulières ne sont ajoutées au contexte que si leur texte contient le numéro de police normalisé du dossier et des marqueurs contractuels. Cette vérification empêche d’utiliser par erreur les conditions d’un autre client ; elle ne prouve pas l’authenticité du document ni l’identité de son signataire. Une garde déterministe traite certains cas explicites de garantie collision, sans remplacer une validation contractuelle exhaustive.
 
 \subsection*{Évaluation courte du retrieval}
-Un jeu de huit questions, avec pages pertinentes repérées manuellement dans le contrat, compare les pages entières (99 passages) à des fenêtres fixes de 500 mots avec chevauchement de 50 mots (131 passages). Le modèle de production \code{nomic-embed-text:latest} a été exécuté localement via Ollama ; le classement utilise la similarité cosinus. Les deux segmentations atteignent Hit@5 = 1,00 ; le MRR@5 est 0,583 pour les pages et 0,646 pour les fenêtres fixes (+0,063). Le gain observé favorise les fenêtres fixes sur ce petit jeu, sans démontrer qu’elles sont toujours meilleures ; les pages facilitent la référence contractuelle. Le baseline lexical atteint respectivement MRR@5 = 0,754 et 0,760. Le code, les questions, les pages de référence, les rangs et la commande reproductible figurent dans \code{output/evaluation/evaluation\_rag.md}.
+Un jeu de 16 questions annotées manuellement compare les pages entières (99 passages) aux fenêtres de 500 mots avec chevauchement de 50 mots (131 passages). Avec \code{nomic-embed-text:latest} et la similarité cosinus, Hit@5 vaut 0,938 pour les deux segmentations ; MRR@5 vaut 0,604 par page et 0,596 par fenêtre. Le baseline lexical obtient Hit@5 = 0,812 et MRR@5 = 0,658 / 0,661. Le découpage en fenêtres est retenu pour borner le contexte, pas pour un gain de pertinence établi. Le jeu est trop petit et annoté par une seule personne pour conclure à une qualité générale du retrieval ; les rangs détaillés figurent dans \code{output/evaluation/evaluation\_rag.md}.
 
 \newpage
 \section{Agents et règles de décision}
@@ -179,7 +179,7 @@ La confiance affichée est une heuristique, pas une probabilité calibrée. Elle
 \newpage
 \section{Évaluation et résultats}
 \subsection*{Tests logiciels}
-La suite Django contient 18 tests unitaires et d’API. Lors de la vérification du 28 octobre 2026, les 18 tests ont réussi dans le conteneur backend. Deux nouveaux tests vérifient la comparaison des textes et le choix de l’OCR lorsque pypdf n’a rien extrait. Un test d’intégration dans Docker sur un PDF image-only a confirmé 0 caractère pypdf, 47 caractères OCR et la sélection de l’OCR. Ces tests vérifient le comportement du code ; ils ne mesurent pas la précision générale des modèles.
+La suite Django contient des tests unitaires et d’API, notamment pour la comparaison pypdf/OCR, le découpage des passages RAG et la correspondance du numéro de contrat. Un test d’intégration antérieur sur un PDF image-only a confirmé que l’OCR prend le relais lorsque pypdf n’extrait aucun texte. Les tests vérifient des comportements ciblés ; ils ne mesurent pas la précision générale des modèles.
 
 \subsection*{Cas de démonstration observés}
 \begin{itemize}
@@ -188,18 +188,18 @@ La suite Django contient 18 tests unitaires et d’API. Lors de la vérification
 \end{itemize}
 
 \subsection*{Ce qui n’est pas encore mesuré}
-Le jeu RAG de huit questions est réduit et ses pages de référence sont annotées manuellement ; les métriques ne suffisent pas à conclure à une qualité générale du retrieval. Aucun jeu de référence assez large ne mesure précision, rappel, macro-F1, taux de faux rejet ou de fausse acceptation. Aucun benchmark contrôlé ne compare les LLM. La bibliothèque versionnée de prompts, avec rôles, techniques, échecs et corrections, est livrée séparément sous \code{bibliotheque\_prompts.md}. La suite Django couvre les règles et API mais ne remplace pas l’évaluation sur des dossiers annotés.
+Le jeu RAG de 16 questions reste réduit et ses pages de référence sont annotées manuellement ; les métriques ne suffisent pas à conclure à une qualité générale du retrieval. Aucun jeu de référence assez large ne mesure précision, rappel, macro-F1, taux de faux rejet ou de fausse acceptation. Aucun benchmark contrôlé ne compare les LLM. La bibliothèque versionnée de prompts, avec rôles, techniques, échecs et corrections, est livrée séparément sous \code{bibliotheque\_prompts.md}. La suite Django couvre les règles et API mais ne remplace pas l’évaluation sur des dossiers annotés.
 
 \newpage
 \section{Sécurité, limites et conclusion}
 \subsection*{Mesures présentes et risques observés}
-L’inférence Ollama est locale dans la configuration testée. Le callback final utilise un jeton dédié et les sorties structurées sont validées. En revanche, les paramètres observés restent ceux d’une démonstration : valeurs secrètes par défaut dans la configuration, mode debug activable, absence de permissions par rôle clairement implémentées sur les API et stockage des médias sans politique de chiffrement ou de rétention démontrée. L’envoi d’un dossier à un responsable peut également transmettre des données personnelles par email.
+L’inférence Ollama est locale dans la configuration testée. En mode production, Django refuse désormais les secrets de démonstration et les identifiants de base de données par défaut, et active les protections HTTPS et cookies sécurisés. La configuration locale reste volontairement orientée démonstration. L’authentification et les permissions par rôle ne sont pas implémentées sur les API ; le chiffrement et la rétention des médias ne sont pas démontrés. L’envoi d’un dossier à un responsable peut transmettre des données personnelles par email.
 
 Les pièces doivent être traitées comme des données non fiables : un PDF peut contenir du texte trompeur ou une instruction destinée au modèle. La validation JSON limite les erreurs de format, pas l’injection de prompt ni les erreurs d’interprétation.
 
 \subsection*{Mesures nécessaires avant un déploiement}
 \begin{itemize}
-\item Désactiver le mode debug ; remplacer et protéger les secrets ; configurer les hôtes autorisés, HTTPS et les mots de passe de base de données.
+\item Fournir les secrets privés et identifiants réels, configurer les hôtes autorisés et déployer derrière HTTPS avant la mise en production.
 \item Ajouter authentification, rôles et permissions aux API ; protéger les endpoints internes et le webhook n8n.
 \item Restreindre format, taille et accès aux pièces ; ajouter analyse antivirus, stockage privé chiffré, sauvegarde et règle de rétention.
 \item Limiter les données envoyées aux modèles et aux emails ; tracer les consultations et transmissions.

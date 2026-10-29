@@ -28,6 +28,14 @@ QUERIES = [
     ("Exclusions dommages conducteur état alcoolique stupéfiants", {43}),
     ("La garantie dommages tous accidents dépend-elle des conditions particulières ?", {43, 71}),
     ("Comment AXA indemnise les réparations du véhicule ?", {55, 56, 57}),
+    ("Assistance dépannage en cas de panne et conditions pour appeler l’assisteur", {31}),
+    ("Prise en charge des dommages causés aux tiers par la responsabilité civile", {55}),
+    ("Montant de la franchise légale pour catastrophe naturelle véhicule", {47}),
+    ("Dommages au véhicule après effraction et tentative de vol", {41}),
+    ("Faut-il déclarer le sinistre avant toute réparation ou remplacement", {53}),
+    ("Sanctions si l’assuré ne respecte pas les formalités et obligations de déclaration", {54}),
+    ("Paiement direct au garage partenaire pour réparer le véhicule", {57}),
+    ("Calcul de l’indemnisation si réparation chez un garage non partenaire", {56}),
 ]
 STOP = {"quelle", "quelles", "quel", "quels", "est", "sont", "dans", "des", "les", "la", "le", "de", "du", "un", "une", "et", "en", "cas", "pour", "par", "à", "au", "aux", "l", "d", "il", "elle", "reste", "t", "assuré", "assuree"}
 
@@ -81,6 +89,7 @@ def evaluate(chunks):
 def ollama_embeddings(texts, model, batch_size=32):
     vectors = []
     for start in range(0, len(texts), batch_size):
+        print(f"Embedding {start + 1}-{min(start + batch_size, len(texts))}/{len(texts)} avec {model}", flush=True)
         payload = json.dumps({"model": model, "input": texts[start:start + batch_size]}).encode()
         request = Request("http://localhost:11434/api/embed", data=payload, headers={"Content-Type": "application/json"})
         with urlopen(request, timeout=600) as response:
